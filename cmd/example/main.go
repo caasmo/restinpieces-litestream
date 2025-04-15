@@ -121,10 +121,13 @@ func main() {
         ReplicaName: "main-db-backup",        // Ad-hoc name
     }
 
-    ls, err := litestream.NewLitestream(lsCfg, app.Logger())
+    // Wrap the application logger with the filter
+    filteredLogger := slog.New(NewLitestreamLogFilter(app.Logger().Handler()))
+
+    ls, err := litestream.NewLitestream(lsCfg, filteredLogger) // Pass the filtered logger
     if err != nil {
         // Log the error and decide if it's fatal
-        app.Logger().Error("failed to initialize litestream", "error", err)
+        filteredLogger.Error("failed to initialize litestream", "error", err) // Use filtered logger here too
 		os.Exit(1) 
 
     }
