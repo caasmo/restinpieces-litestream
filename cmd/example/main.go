@@ -7,8 +7,62 @@ import (
 	"os"
 
 	"github.com/caasmo/restinpieces"
+	"strings" // <-- Import strings package
+
 	"github.com/caasmo/restinpieces-litestream"
 )
+
+// --- Custom Log Handler for Litestream Filtering ---
+
+// LitestreamLogFilter wraps a slog.Handler to filter Litestream debug messages.
+type LitestreamLogFilter struct {
+	next slog.Handler // The next handler in the chain
+}
+
+// NewLitestreamLogFilter creates a new filtering handler.
+func NewLitestreamLogFilter(next slog.Handler) *LitestreamLogFilter {
+	return &LitestreamLogFilter{next: next}
+}
+
+// Enabled implements slog.Handler. It checks if the level is enabled by the next handler.
+// We don't filter based on level here, Handle does the filtering.
+func (h *LitestreamLogFilter) Enabled(ctx context.Context, level slog.Level) bool {
+	return h.next.Enabled(ctx, level)
+}
+
+// Handle implements slog.Handler. It filters DEBUG messages unless they contain specific keywords.
+func (h *LitestreamLogFilter) Handle(ctx context.Context, r slog.Record) error {
+	// Allow non-DEBUG messages unconditionally
+	if r.Level >= slog.LevelInfo {
+		return h.next.Handle(ctx, r)
+	}
+
+	// For DEBUG messages, check the message content
+	if r.Level == slog.LevelDebug {
+		// Allow specific DEBUG messages (e.g., indicating a file copy)
+		if strings.Contains(r.Message, "copy-shadow") {
+			return h.next.Handle(ctx, r)
+		}
+		// Discard other DEBUG messages by returning nil (no error, but don't handle)
+		return nil
+	}
+
+	// Handle any other levels normally (though shouldn't happen with standard levels)
+	return h.next.Handle(ctx, r)
+}
+
+// WithAttrs implements slog.Handler.
+func (h *LitestreamLogFilter) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return NewLitestreamLogFilter(h.next.WithAttrs(attrs))
+}
+
+// WithGroup implements slog.Handler.
+func (h *LitestreamLogFilter) WithGroup(name string) slog.Handler {
+	return NewLitestreamLogFilter(h.next.WithGroup(name))
+}
+
+// --- End Custom Log Handler ---
+
 
 // Pool creation helpers moved to restinpieces package
 
