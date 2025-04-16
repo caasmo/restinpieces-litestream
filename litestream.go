@@ -208,17 +208,7 @@ func (l *Litestream) Start() error {
 
 	// Wait for the goroutine to confirm startup success or failure
 	err := <-startupComplete
-	if err != nil {
-		// Startup failed. Signal cancellation just in case it wasn't
-		// already done by the goroutine finding the error.
-		l.cancel()
-		// Return the error immediately. The goroutine's deferred cleanup
-		// will run, and the main application shutdown will wait via Stop().
-		return fmt.Errorf("litestream startup failed: %w", err)
-	}
-
-	// Startup succeeded
-	return nil
+	return err
 }
 
 // Stop gracefully shuts down the backup process by cancelling the context.
