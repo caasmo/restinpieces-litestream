@@ -12,8 +12,15 @@ import (
 )
 
 func main() {
+	// --- Core Application Flags ---
 	dbfile := flag.String("dbfile", "app.db", "SQLite database file path")
 	configFile := flag.String("config", "", "Path to configuration file")
+
+	// --- Litestream Flags ---
+	// Note: dbfile is reused for Litestream's DBPath
+	lsReplicaPath := flag.String("litestream-replica-path", "./litestream_replicas", "Directory path for storing Litestream replicas")
+	lsReplicaName := flag.String("litestream-replica-name", "main-db-backup", "Unique identifier for this Litestream replica instance")
+	// Add more flags here to control other litestream.ReplicaConfig options if needed
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [flags]\n\n", os.Args[0])
@@ -23,6 +30,9 @@ func main() {
 	}
 
 	flag.Parse()
+
+	// --- Get Litestream Configuration ---
+	lsCfg := getConf(*dbfile, *lsReplicaPath, *lsReplicaName)
 
 	// --- Create the Database Pool ---
 	// Use the helper from the library to create a pool with suitable defaults.
@@ -71,4 +81,29 @@ func main() {
 	srv.Run()
 
 	slog.Info("Server shut down gracefully.")
+}
+
+// getConf reads litestream configuration options from command-line flags
+// and returns a populated litestream.Config struct.
+func getConf(dbPath, replicaPath, replicaName string) litestream.Config {
+	// Basic configuration from flags
+	cfg := litestream.Config{
+		DBPath:      dbPath,      // Use the main dbfile flag
+		ReplicaPath: replicaPath, // From --litestream-replica-path flag
+		ReplicaName: replicaName, // From --litestream-replica-name flag
+	}
+
+	// Here you could add logic to read more advanced options
+	// from flags or a config file if needed, for example:
+	// cfg.ReplicaConfig.Retention = *lsRetentionFlag
+	// cfg.ReplicaConfig.SyncInterval = *lsSyncIntervalFlag
+	// etc.
+
+	slog.Info("Litestream Configuration",
+		"DBPath", cfg.DBPath,
+		"ReplicaPath", cfg.ReplicaPath,
+		"ReplicaName", cfg.ReplicaName,
+	)
+
+	return cfg
 }
