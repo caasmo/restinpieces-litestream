@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	// "time" // <-- Remove this import if no longer needed
 
 	"github.com/benbjohnson/litestream"
 	"github.com/benbjohnson/litestream/file"
@@ -155,7 +156,12 @@ func (l *Litestream) Start() error {
 	}
 	l.logger.Info("💾 litestream: database opened successfully")
 
+	// Channel to synchronize startup: reports error or nil for success
+	startupComplete := make(chan error, 1)
+
 	go func() {
+		var startupErr error // Track the first error encountered
+
 		defer close(l.shutdownDone)
 		defer func() {
 			l.logger.Info("💾 litestream: closing database")
@@ -168,21 +174,31 @@ func (l *Litestream) Start() error {
 
 		l.logger.Info("💾 litestream: starting replication for all configured replicas")
 
-		// Start replication for each replica.
-		// Errors here are logged, but don't stop other replicas from trying.
+		// Attempt to start all replicas. If any fail, record the error and stop.
 		for _, replica := range l.db.Replicas {
-			l := l.logger.With("replica_name", replica.Name)
-			l.Info("💾 litestream: starting replica")
+			rl := l.logger.With("replica_name", replica.Name) // Replica-specific logger
+			rl.Info("💾 litestream: starting replica")
 			// replica.Start runs its own goroutine for syncing
 			if err := replica.Start(l.ctx); err != nil {
-				// Log critical error, but don't stop the main loop
-				l.Error("💾 litestream: failed to start replica", "error", err)
+				rl.Error("💾 litestream: CRITICAL - failed to start replica", "error", err)
+				startupErr = fmt.Errorf("failed to start replica '%s': %w", replica.Name, err)
+				break // Stop trying to start other replicas
 			} else {
-				l.Info("💾 litestream: replica started successfully")
+				rl.Info("💾 litestream: replica started successfully")
 			}
 		}
 
-		l.logger.Info("💾 litestream: all replica start attempts initiated")
+		// If an error occurred during startup, signal failure and initiate shutdown
+		if startupErr != nil {
+			l.logger.Error("💾 litestream: one or more replicas failed to start, initiating shutdown", "error", startupErr)
+			startupComplete <- startupErr // Report the error back to Start() caller
+			l.cancel()                    // Trigger context cancellation to stop everything
+			return                        // Exit the goroutine
+		}
+
+		// If all replicas started successfully
+		l.logger.Info("💾 litestream: all replicas started successfully")
+		startupComplete <- nil // Signal successful startup
 
 		// Wait for shutdown signal
 		<-l.ctx.Done()
@@ -190,7 +206,19 @@ func (l *Litestream) Start() error {
 		// db.Close() called by defer will handle stopping replicas
 	}()
 
-	return nil // Return nil as db.Open() succeeded
+	// Wait for the goroutine to confirm startup success or failure
+	err := <-startupComplete
+	if err != nil {
+		// Startup failed. Signal cancellation just in case it wasn't
+		// already done by the goroutine finding the error.
+		l.cancel()
+		// Return the error immediately. The goroutine's deferred cleanup
+		// will run, and the main application shutdown will wait via Stop().
+		return fmt.Errorf("litestream startup failed: %w", err)
+	}
+
+	// Startup succeeded
+	return nil
 }
 
 // Stop gracefully shuts down the backup process by cancelling the context.
