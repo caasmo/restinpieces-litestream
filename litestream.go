@@ -78,7 +78,6 @@ func NewLitestream(cfg Config, logger *slog.Logger) (*Litestream, error) {
 
 		l := logger.With("replica_name", rc.Name, "replica_type", rc.Type)
 		var replicaClient litestream.ReplicaClient
-		var err error
 
 		switch rc.Type {
 		case "file":
