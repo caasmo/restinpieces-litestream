@@ -79,46 +79,47 @@ func main() {
 // getConf provides the configuration for Litestream.
 // Currently, it uses hardcoded values for replica settings but takes the
 // database path as an argument.
-// This function is intended to be the central place for managing all
-// Litestream settings (e.g., replica type, retention, sync intervals)
-// once the litestream package is refactored to support them.
+// This function is the central place for defining the Litestream configuration,
+// including the database path and all desired replicas.
 func getConf(dbPath string) litestream.Config {
-	// Define Litestream configuration here.
-	// In a future refactor, this could return a more comprehensive struct
-	// mirroring litestream.DBConfig and litestream.ReplicaConfig.
-	cfg := litestream.Config{
-		// DBPath is derived from the --dbfile flag passed to the application.
-		DBPath: dbPath,
-
-		// ReplicaPath specifies the directory where Litestream will store
-		// its backup files (snapshots and WAL segments).
-		// Default: "./litestream_replicas" (relative to the working directory).
-		// Consider using an absolute path or a path derived from configuration
-		// for production deployments.
-		ReplicaPath: "./litestream_replicas",
-
-		// ReplicaName provides a unique identifier for this specific replica.
-		// This is important if you have multiple replicas (e.g., different
-		// backup targets or instances).
-		// Default: "default-backup".
-		ReplicaName: "default-backup",
-
-		// --- Future Configuration Examples ---
-		// These fields are not yet used by the current litestream.go implementation
-		// but demonstrate how this function could be extended.
-		//
-		// ReplicaType: "file", // Or "s3", "abs", "gcs", etc.
-		// AccessKeyID: "...", // For S3/compatible
-		// SecretAccessKey: "...", // For S3/compatible
-		// Region: "us-east-1", // For S3/compatible
-		// Bucket: "my-backup-bucket", // For S3/compatible
-		// Path: "database_backups/", // Path within the bucket
-		// Retention: "24h", // How long to keep snapshots/WALs
-		// SyncInterval: "1s", // How often to sync WAL changes
+	// Define multiple replicas here.
+	// IMPORTANT: Avoid hardcoding credentials in production. Use environment
+	// variables, secrets management, or a secure configuration system.
+	replicas := []litestream.ReplicaConfig{
+		{
+			Name:     "local_file", // Unique name for this replica
+			Type:     "file",
+			FilePath: "./litestream_replicas", // Local directory for backup
+		},
+		{
+			Name:              "s3_backup", // Unique name for the S3 replica
+			Type:              "s3",
+			S3Bucket:          "my-litestream-test-bucket", // CHANGE: Your S3 bucket name
+			S3Region:          "us-east-1",                 // CHANGE: Your S3 bucket region
+			S3Path:            "backups/myapp",             // Optional: Path prefix in the bucket
+			S3Endpoint:        "",                          // Optional: Use for S3-compatible storage (e.g., MinIO URL like "http://localhost:9000")
+			S3AccessKeyID:     os.Getenv("AWS_ACCESS_KEY_ID"), // Read from environment
+			S3SecretAccessKey: os.Getenv("AWS_SECRET_ACCESS_KEY"), // Read from environment
+			S3ForcePathStyle:  false, // Set to true for MinIO or other S3-compatibles requiring path-style access
+			// S3SkipVerify:   true, // Uncomment if using self-signed certs (use with caution)
+		},
+		// Add more ReplicaConfig structs here for additional replicas if needed
 	}
 
-	// No logging here; configuration is static within this function.
-	// Logging can happen where NewLitestream is called if needed.
+	// Log which replicas are being configured (optional)
+	for _, r := range replicas {
+		slog.Info("Configuring Litestream replica", "name", r.Name, "type", r.Type)
+		if r.Type == "s3" {
+			slog.Info("S3 Replica Details", "bucket", r.S3Bucket, "region", r.S3Region, "path", r.S3Path, "endpoint", r.S3Endpoint)
+			if r.S3AccessKeyID == "" || r.S3SecretAccessKey == "" {
+				slog.Warn("S3 credentials not found in environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY). S3 replica might fail.")
+			}
+		}
+	}
 
-	return cfg
+
+	return litestream.Config{
+		DBPath:   dbPath,
+		Replicas: replicas,
+	}
 }
