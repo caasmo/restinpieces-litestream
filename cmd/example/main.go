@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"context"
 
 	"github.com/caasmo/restinpieces"
-	"strings" // <-- Import strings package
 
 	"github.com/caasmo/restinpieces-litestream"
 )
@@ -63,8 +61,6 @@ func main() {
 
     ls, err := litestream.NewLitestream(lsCfg, app.Logger()) 
     if err != nil {
-        // Log the error and decide if it's fatal
-        filteredLogger.Error("failed to initialize litestream", "error", err) // Use filtered logger here too
 		os.Exit(1) 
 
     }
