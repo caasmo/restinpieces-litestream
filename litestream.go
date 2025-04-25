@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"time"
 	"path/filepath"
+	"time"
 
 	"github.com/benbjohnson/litestream"
 	"github.com/benbjohnson/litestream/file"
@@ -22,31 +22,31 @@ type ReplicaConfig struct {
 	Name string `toml:"name" comment:"REQUIRED, unique name for this replica (e.g., \"local\", \"s3-main\")"`
 	Type string `toml:"type" comment:"Replica type: \"file\" or \"s3\""`
 
-    // --- General Replica Settings ---
-    // How often this specific replica attempts to synchronize new WAL segments
-    // to its storage backend (file, S3, etc.). This determines the maximum
-    // potential data loss (RPO - Recovery Point Objective) for this replica.
-    // Litestream Default: 1s (1 second)
-    SyncInterval         string `toml:"sync_interval,omitempty" comment:"OPTIONAL, how often the replica attempts to sync WAL segments (e.g., \"1s\", \"10s\"). Default: \"1s\""`
+	// --- General Replica Settings ---
+	// How often this specific replica attempts to synchronize new WAL segments
+	// to its storage backend (file, S3, etc.). This determines the maximum
+	// potential data loss (RPO - Recovery Point Objective) for this replica.
+	// Litestream Default: 1s (1 second)
+	SyncInterval string `toml:"sync_interval,omitempty" comment:"OPTIONAL, how often the replica attempts to sync WAL segments (e.g., \"1s\", \"10s\"). Default: \"1s\""`
 
-    // Description: How frequently Litestream creates a full snapshot of the
-    // database and uploads it to this replica. Snapshots allow for faster
-    // restores as you don't need to replay the entire WAL history. They also
-    // act as boundary points for retention.
-    // Litestream Default: 24h (24 hours)
-    SnapshotInterval     string `toml:"snapshot_interval,omitempty" comment:"OPTIONAL, how often to create a full DB snapshot on the replica (e.g., \"1h\", \"24h\"). Default: \"24h\""`
+	// Description: How frequently Litestream creates a full snapshot of the
+	// database and uploads it to this replica. Snapshots allow for faster
+	// restores as you don't need to replay the entire WAL history. They also
+	// act as boundary points for retention.
+	// Litestream Default: 24h (24 hours)
+	SnapshotInterval string `toml:"snapshot_interval,omitempty" comment:"OPTIONAL, how often to create a full DB snapshot on the replica (e.g., \"1h\", \"24h\"). Default: \"24h\""`
 
-    // Specifies the minimum duration for which WAL segment files and snapshots
-    // should be retained on this replica. Older files/snapshots are pruned
-    // during retention checks. An empty string or "0" typically means retain
-    // forever.
-    // Litestream Default: 0 (keep forever)
-    Retention            string `toml:"retention,omitempty" comment:"OPTIONAL, how long to keep WAL segments/snapshots (e.g., \"7d\", \"30d\"). Empty means keep forever. Default: keep forever"`
+	// Specifies the minimum duration for which WAL segment files and snapshots
+	// should be retained on this replica. Older files/snapshots are pruned
+	// during retention checks. An empty string or "0" typically means retain
+	// forever.
+	// Litestream Default: 0 (keep forever)
+	Retention string `toml:"retention,omitempty" comment:"OPTIONAL, how long to keep WAL segments/snapshots (e.g., \"7d\", \"30d\"). Empty means keep forever. Default: keep forever"`
 
-    // How often Litestream checks this replica's storage to enforce the
-    // Retention policy and delete expired snapshots/WAL files.
-    // Litestream Default: 1h (1 hour)
-    RetentionCheckInterval string `toml:"retention_check_interval,omitempty" comment:"OPTIONAL, how often to check for retention policy enforcement (e.g., \"1h\", \"24h\"). Default: \"1h\""`
+	// How often Litestream checks this replica's storage to enforce the
+	// Retention policy and delete expired snapshots/WAL files.
+	// Litestream Default: 1h (1 hour)
+	RetentionCheckInterval string `toml:"retention_check_interval,omitempty" comment:"OPTIONAL, how often to check for retention policy enforcement (e.g., \"1h\", \"24h\"). Default: \"1h\""`
 
 	// --- File Replica Settings ---
 	FilePath string `toml:"file_path,omitempty" comment:"Directory path for storing file replicas (used if Type == \"file\")"`
@@ -66,16 +66,16 @@ type ReplicaConfig struct {
 // The database path is passed separately during initialization.
 type Config struct {
 
-    // How frequently Litestream checks the SQLite WAL (Write-Ahead Log) file
-    // index for changes. More frequent checks mean lower latency for detecting
-    // new commits but slightly higher overhead. Litestream Default: 1s (1 second)
-    MonitorInterval      string `toml:"monitor_interval,omitempty" comment:"OPTIONAL, how often to check the WAL for changes (e.g., \"1s\", \"250ms\"). Default: \"1s\""`
+	// How frequently Litestream checks the SQLite WAL (Write-Ahead Log) file
+	// index for changes. More frequent checks mean lower latency for detecting
+	// new commits but slightly higher overhead. Litestream Default: 1s (1 second)
+	MonitorInterval string `toml:"monitor_interval,omitempty" comment:"OPTIONAL, how often to check the WAL for changes (e.g., \"1s\", \"250ms\"). Default: \"1s\""`
 
-    // How often Litestream requests SQLite to perform a WAL checkpoint
-    // (PASSIVE mode). Checkpointing moves changes from the WAL file back into
-    // the main database file. This helps keep the WAL file size manageable.
-    // Litestream Default: 1m (1 minute)
-    CheckpointInterval   string `toml:"checkpoint_interval,omitempty" comment:"OPTIONAL, how often to request a WAL checkpoint (e.g., \"1m\", \"5m\"). Default: \"1m\""`
+	// How often Litestream requests SQLite to perform a WAL checkpoint
+	// (PASSIVE mode). Checkpointing moves changes from the WAL file back into
+	// the main database file. This helps keep the WAL file size manageable.
+	// Litestream Default: 1m (1 minute)
+	CheckpointInterval string `toml:"checkpoint_interval,omitempty" comment:"OPTIONAL, how often to request a WAL checkpoint (e.g., \"1m\", \"5m\"). Default: \"1m\""`
 
 	Replicas []ReplicaConfig `toml:"replicas" comment:"Slice defining one or more replicas."`
 }
@@ -109,28 +109,28 @@ func NewLitestream(dbPath string, cfg Config, logger *slog.Logger) (*Litestream,
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	db := litestream.NewDB(dbPath) // Use dbPath argument
+	db := litestream.NewDB(dbPath)        // Use dbPath argument
 	db.Logger = logger.With("db", dbPath) // Use dbPath argument
 	// Ensure the Replicas slice is initialized before appending
 	db.Replicas = make([]*litestream.Replica, 0, len(cfg.Replicas))
 
 	// --- DB-Level settings ---
-    if cfg.MonitorInterval != "" {
-        d, err := time.ParseDuration(cfg.MonitorInterval)
-        if err != nil {
-            cancel()
-            return nil, fmt.Errorf("litestream: invalid monitor_interval format: %w", err)
-        }
-        db.MonitorInterval = d
-    }
-    if cfg.CheckpointInterval != "" {
-        d, err := time.ParseDuration(cfg.CheckpointInterval)
-        if err != nil {
-            cancel()
-            return nil, fmt.Errorf("litestream: invalid checkpoint_interval format: %w", err)
-        }
-        db.CheckpointInterval = d
-    }
+	if cfg.MonitorInterval != "" {
+		d, err := time.ParseDuration(cfg.MonitorInterval)
+		if err != nil {
+			cancel()
+			return nil, fmt.Errorf("litestream: invalid monitor_interval format: %w", err)
+		}
+		db.MonitorInterval = d
+	}
+	if cfg.CheckpointInterval != "" {
+		d, err := time.ParseDuration(cfg.CheckpointInterval)
+		if err != nil {
+			cancel()
+			return nil, fmt.Errorf("litestream: invalid checkpoint_interval format: %w", err)
+		}
+		db.CheckpointInterval = d
+	}
 
 	// --- Configure Each Replica ---
 	for _, rc := range cfg.Replicas {
@@ -142,9 +142,7 @@ func NewLitestream(dbPath string, cfg Config, logger *slog.Logger) (*Litestream,
 		l := logger.With("replica_name", rc.Name, "replica_type", rc.Type)
 		var replicaClient litestream.ReplicaClient
 
-
-
-	switch rc.Type {
+		switch rc.Type {
 		case "file":
 			if rc.FilePath == "" {
 				cancel()
@@ -211,7 +209,7 @@ func NewLitestream(dbPath string, cfg Config, logger *slog.Logger) (*Litestream,
 				// An empty string "" could also mean forever. Check litestream code if exact behavior is needed.
 				return nil, fmt.Errorf("litestream: invalid retention format for replica '%s': %w", rc.Name, err)
 			}
-			replica.Retention = d 
+			replica.Retention = d
 		}
 
 		// Handle Retention="0" or empty string for forever (default behavior)
@@ -227,15 +225,6 @@ func NewLitestream(dbPath string, cfg Config, logger *slog.Logger) (*Litestream,
 			}
 			replica.RetentionCheckInterval = d
 		}
-
-
-
-
-
-
-
-
-
 
 		db.Replicas = append(db.Replicas, replica)
 	}

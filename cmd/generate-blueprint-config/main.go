@@ -28,17 +28,17 @@ func generateBlueprintConfig() litestream.Config {
 		{
 			Name:                   "s3_backup_example", // Unique name for the S3 replica
 			Type:                   "s3",
-			SyncInterval:           "10s",                         // Optional: Example override (Default is 1s)
-			SnapshotInterval:       "1h",                          // Optional: Example override (Default is 24h)
-			Retention:              "7d",                          // Optional: Example override (Default is keep forever)
-			RetentionCheckInterval: "1h",                          // Optional: Default is 1h
-			S3Bucket:               "your-s3-bucket-name",         // Placeholder: Your S3 bucket name
-			S3Region:          "your-s3-region",         // Placeholder: Your S3 bucket region
-			S3Path:            "backups/myapp",          // Optional: Path prefix in the bucket
-			S3Endpoint:        "endpoint",               // Optional: Use for S3-compatible storage (e.g., MinIO URL)
-			S3AccessKeyID:     "YOUR_ACCESS_KEY_ID",     // Placeholder: Set via env or secrets management
-			S3SecretAccessKey: "YOUR_SECRET_ACCESS_KEY", // Placeholder: Set via env or secrets management
-			S3ForcePathStyle:  false,                    // Set to true for MinIO or other S3-compatibles
+			SyncInterval:           "10s",                    // Optional: Example override (Default is 1s)
+			SnapshotInterval:       "1h",                     // Optional: Example override (Default is 24h)
+			Retention:              "7d",                     // Optional: Example override (Default is keep forever)
+			RetentionCheckInterval: "1h",                     // Optional: Default is 1h
+			S3Bucket:               "your-s3-bucket-name",    // Placeholder: Your S3 bucket name
+			S3Region:               "your-s3-region",         // Placeholder: Your S3 bucket region
+			S3Path:                 "backups/myapp",          // Optional: Path prefix in the bucket
+			S3Endpoint:             "endpoint",               // Optional: Use for S3-compatible storage (e.g., MinIO URL)
+			S3AccessKeyID:          "YOUR_ACCESS_KEY_ID",     // Placeholder: Set via env or secrets management
+			S3SecretAccessKey:      "YOUR_SECRET_ACCESS_KEY", // Placeholder: Set via env or secrets management
+			S3ForcePathStyle:       false,                    // Set to true for MinIO or other S3-compatibles
 			// S3SkipVerify:   false, // Set to true if using self-signed certs (use with caution)
 		},
 		// Add more replica examples if needed

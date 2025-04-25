@@ -13,7 +13,6 @@ import (
 	"github.com/caasmo/restinpieces-litestream"
 )
 
-
 func main() {
 	// --- Core Application Flags ---
 	dbPath := flag.String("dbpath", "app.db", "SQLite database file path")
@@ -63,20 +62,19 @@ func main() {
 	// --- Litestream Setup (Load from DB) ---
 	var ls *litestream.Litestream // Declare ls variable
 
-
 	// Proceed with Litestream setup since age key is present.
 	app.Logger().Info("Litestream integration enabled")
 
 	// 1. Load Encrypted Config from DB using App's SecureConfigStore
 	app.Logger().Info("Loading Litestream configuration from database", "scope", litestream.ConfigScope) // Use exported constant
-	encryptedTomlData, err := app.SecureConfigStore().Latest(litestream.ConfigScope) // Use exported constant
+	encryptedTomlData, err := app.SecureConfigStore().Latest(litestream.ConfigScope)                     // Use exported constant
 	if err != nil {
 		app.Logger().Error("failed to load Litestream config from DB", "scope", litestream.ConfigScope, "error", err)
 		os.Exit(1)
 	}
 	if len(encryptedTomlData) == 0 {
 		app.Logger().Error("Litestream config data loaded from DB is empty", "scope", litestream.ConfigScope)
-		os.Exit(1) 
+		os.Exit(1)
 	}
 
 	// 2. Unmarshal TOML Config
