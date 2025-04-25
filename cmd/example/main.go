@@ -64,7 +64,7 @@ func main() {
 	// --- Litestream Setup (Load from DB) ---
 	var ls *litestream.Litestream // Declare ls variable
 
-	if *ageKeyPathFlag != "" {
+	if *ageKeyPath != "" {
 		app.Logger().Info("Litestream integration enabled via -age-key flag")
 
 		// 1. Get DB implementation (needed for SecureConfig)
