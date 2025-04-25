@@ -6,11 +6,10 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	// "time" // <-- Remove this import if no longer needed
 
 	"github.com/benbjohnson/litestream"
 	"github.com/benbjohnson/litestream/file"
-	"github.com/benbjohnson/litestream/s3" // Import S3 package
+	"github.com/benbjohnson/litestream/s3" 
 )
 
 // ReplicaConfig holds configuration for a single Litestream replica.
