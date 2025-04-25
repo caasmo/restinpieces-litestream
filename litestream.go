@@ -14,28 +14,28 @@ import (
 
 // ReplicaConfig holds configuration for a single Litestream replica.
 type ReplicaConfig struct {
-	Name string // REQUIRED, unique name for this replica (e.g., "local", "s3-main")
-	Type string // Replica type: "file" or "s3"
+	Name string `toml:"name" comment:"REQUIRED, unique name for this replica (e.g., \"local\", \"s3-main\")"`
+	Type string `toml:"type" comment:"Replica type: \"file\" or \"s3\""`
 
 	// --- File Replica Settings ---
-	FilePath string // Directory path for storing file replicas (used if Type == "file")
+	FilePath string `toml:"file_path,omitempty" comment:"Directory path for storing file replicas (used if Type == \"file\")"`
 
 	// --- S3 Replica Settings ---
-	S3Endpoint        string // S3 API endpoint (e.g., "s3.amazonaws.com" or MinIO address)
-	S3Region          string // S3 region (e.g., "us-east-1")
-	S3Bucket          string // S3 bucket name
-	S3Path            string // Optional path prefix within the bucket
-	S3AccessKeyID     string // S3 Access Key ID
-	S3SecretAccessKey string // S3 Secret Access Key
-	S3ForcePathStyle  bool   // Use path-style addressing (needed for MinIO/S3-compatibles)
-	// S3SkipVerify    bool   // Optional: Skip TLS verification
+	S3Endpoint        string `toml:"s3_endpoint,omitempty" comment:"S3 API endpoint (e.g., \"s3.amazonaws.com\" or MinIO address)"`
+	S3Region          string `toml:"s3_region,omitempty" comment:"S3 region (e.g., \"us-east-1\")"`
+	S3Bucket          string `toml:"s3_bucket,omitempty" comment:"S3 bucket name"`
+	S3Path            string `toml:"s3_path,omitempty" comment:"Optional path prefix within the bucket"`
+	S3AccessKeyID     string `toml:"s3_access_key_id,omitempty" comment:"S3 Access Key ID (set via env or secrets)"`
+	S3SecretAccessKey string `toml:"s3_secret_access_key,omitempty" comment:"S3 Secret Access Key (set via env or secrets)"`
+	S3ForcePathStyle  bool   `toml:"s3_force_path_style,omitempty" comment:"Use path-style addressing (needed for MinIO/S3-compatibles)"`
+	// S3SkipVerify    bool   `toml:"s3_skip_verify,omitempty" comment:"Optional: Skip TLS verification (use with caution)"`
 }
 
 // Config holds the main Litestream configuration, including the database path
 // and a list of replicas.
 type Config struct {
-	DBPath   string          // Path to the database file to be backed up.
-	Replicas []ReplicaConfig // Slice defining one or more replicas.
+	DBPath   string          `toml:"db_path" comment:"Path to the database file to be backed up."`
+	Replicas []ReplicaConfig `toml:"replicas" comment:"Slice defining one or more replicas."`
 }
 
 // Litestream handles continuous database backups for potentially multiple replicas.
