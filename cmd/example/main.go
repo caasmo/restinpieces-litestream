@@ -64,7 +64,10 @@ func main() {
 	// --- Litestream Setup (Load from DB) ---
 	var ls *litestream.Litestream // Declare ls variable
 
-	if *ageKeyPath != "" {
+	// If no age key is provided, skip Litestream setup entirely.
+	if *ageKeyPath == "" {
+		app.Logger().Info("Litestream integration disabled (no -age-key provided)")
+	} else {
 		app.Logger().Info("Litestream integration enabled via -age-key flag")
 
 		// 1. Get DB implementation (needed for SecureConfig)
@@ -125,10 +128,8 @@ func main() {
 		// 6. Add Litestream as a Daemon
 		srv.AddDaemon(ls)
 		app.Logger().Info("Litestream daemon added to the server")
-
-	} else {
-		app.Logger().Info("Litestream integration disabled (no -age-key provided)")
 	}
+	// End of Litestream setup block
 
 	// Start the server (which will also start Litestream if added)
 	srv.Run()
