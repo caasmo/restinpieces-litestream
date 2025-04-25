@@ -89,19 +89,22 @@ func main() {
 		app.Logger().Error("failed to unmarshal Litestream TOML config", "scope", litestream.ConfigScope, "error", err)
 		os.Exit(1)
 	}
-	app.Logger().Info("Successfully unmarshalled Litestream config", "scope", litestream.ConfigScope, "db_path", lsCfg.DBPath, "replica_count", len(lsCfg.Replicas))
+	// Log without db_path from config, as it's removed
+	app.Logger().Info("Successfully unmarshalled Litestream config", "scope", litestream.ConfigScope, "replica_count", len(lsCfg.Replicas))
 
-	// 3. Ensure the DB path in the Litestream config matches the main app DB path
+	// 3. Ensure the DB path in the Litestream config matches the main app DB path - This check is no longer needed/possible here
+	/*
 	if lsCfg.DBPath != *dbPath {
-		app.Logger().Warn("Litestream config DB path differs from application DB path",
-			"litestream_db_path", lsCfg.DBPath,
+			"litestream_db_path", lsCfg.DBPath, // This field no longer exists
 			"app_db_path", *dbPath)
 		app.Logger().Info("Overriding Litestream DB path with application DB path", "new_path", *dbPath)
-		lsCfg.DBPath = *dbPath
+		lsCfg.DBPath = *dbPath // This field no longer exists
 	}
+	*/
 
 	// 4. Instantiate Litestream
-	ls, err = litestream.NewLitestream(lsCfg, app.Logger())
+	// Pass dbPath directly, along with the loaded config struct
+	ls, err = litestream.NewLitestream(*dbPath, lsCfg, app.Logger())
 	if err != nil {
 		// Error logged within NewLitestream
 		os.Exit(1)

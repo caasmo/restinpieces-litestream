@@ -36,9 +36,9 @@ func generateBlueprintConfig() litestream.Config {
 		// Add more replica examples if needed
 	}
 
-	// Create the main config struct
+	// Create the main config struct (DBPath is removed)
 	cfg := litestream.Config{
-		DBPath:   "/path/to/your/database.db", // Placeholder: Path to the database file to be backed up
+		// DBPath: "/path/to/your/database.db", // Removed: DBPath is now passed directly to NewLitestream
 		Replicas: replicas,
 	}
 

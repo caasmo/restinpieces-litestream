@@ -35,10 +35,10 @@ type ReplicaConfig struct {
 	// S3SkipVerify    bool   `toml:"s3_skip_verify,omitempty" comment:"Optional: Skip TLS verification (use with caution)"`
 }
 
-// Config holds the main Litestream configuration, including the database path
-// and a list of replicas.
+// Config holds the main Litestream configuration for replicas.
+// The database path is passed separately during initialization.
 type Config struct {
-	DBPath   string          `toml:"db_path" comment:"Path to the database file to be backed up."`
+	// DBPath removed - pass directly to NewLitestream
 	Replicas []ReplicaConfig `toml:"replicas" comment:"Slice defining one or more replicas."`
 }
 
@@ -60,15 +60,19 @@ type Litestream struct {
 
 // NewLitestream creates a new Litestream instance configured according to cfg.
 // It sets up the database object and initializes all replicas defined in cfg.Replicas.
-func NewLitestream(cfg Config, logger *slog.Logger) (*Litestream, error) {
+// The dbPath specifies the database file to back up.
+func NewLitestream(dbPath string, cfg Config, logger *slog.Logger) (*Litestream, error) {
+	if dbPath == "" {
+		return nil, fmt.Errorf("litestream: dbPath cannot be empty")
+	}
 	if len(cfg.Replicas) == 0 {
 		return nil, fmt.Errorf("litestream: no replicas configured")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	db := litestream.NewDB(cfg.DBPath)
-	db.Logger = logger.With("db", cfg.DBPath)
+	db := litestream.NewDB(dbPath) // Use dbPath argument
+	db.Logger = logger.With("db", dbPath) // Use dbPath argument
 	// Ensure the Replicas slice is initialized before appending
 	db.Replicas = make([]*litestream.Replica, 0, len(cfg.Replicas))
 
