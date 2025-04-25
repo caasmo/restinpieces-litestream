@@ -19,9 +19,9 @@ const litestreamConfigScope = "litestream"
 
 func main() {
 	// --- Core Application Flags ---
-	dbPathFlag := flag.String("dbpath", "app.db", "SQLite database file path")
-	ageKeyPathFlag := flag.String("age-key", "", "Path to the age identity file (private key) for decrypting Litestream config (required)")
-	litestreamScopeFlag := flag.String("litestream-scope", litestreamConfigScope, "Scope name for Litestream configuration in the database")
+	dbPath := flag.String("dbpath", "app.db", "SQLite database file path")
+	ageKeyPath := flag.String("age-key", "", "Path to the age identity file (private key) for decrypting Litestream config (required)")
+	// litestreamScopeFlag removed
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s -dbpath <path> -age-key <path> [flags]\n\n", os.Args[0])
@@ -32,13 +32,13 @@ func main() {
 
 	flag.Parse()
 
-	if *dbPathFlag == "" || *ageKeyPathFlag == "" {
+	if *dbPath == "" || *ageKeyPath == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
 
 	// --- Create the Database Pool ---
-	dbPool, err := restinpieces.NewZombiezenPool(*dbPathFlag)
+	dbPool, err := restinpieces.NewZombiezenPool(*dbPath)
 	if err != nil {
 		slog.Error("failed to create database pool", "error", err)
 		os.Exit(1) // Exit if pool creation fails
@@ -54,7 +54,7 @@ func main() {
 	// --- Initialize the Application ---
 	app, srv, err := restinpieces.New(
 		restinpieces.WithDbZombiezen(dbPool),
-		restinpieces.WithAgeKeyPath(*ageKeyPathFlag), // Use flag variable
+		restinpieces.WithAgeKeyPath(*ageKeyPath), // Use renamed flag variable
 		restinpieces.WithRouterServeMux(),
 		restinpieces.WithCacheRistretto(),
 		restinpieces.WithTextLogger(nil),
@@ -72,33 +72,33 @@ func main() {
 	app.Logger().Info("Litestream integration enabled")
 
 	// 1. Load Encrypted Config from DB using App's SecureConfigStore
-	app.Logger().Info("Loading Litestream configuration from database", "scope", *litestreamScopeFlag)
-	encryptedTomlData, err := app.SecureConfigStore().Latest(*litestreamScopeFlag)
+	app.Logger().Info("Loading Litestream configuration from database", "scope", litestreamConfigScope) // Use constant directly
+	encryptedTomlData, err := app.SecureConfigStore().Latest(litestreamConfigScope) // Use constant directly
 	if err != nil {
-		app.Logger().Error("failed to load Litestream config from DB", "scope", *litestreamScopeFlag, "error", err)
+		app.Logger().Error("failed to load Litestream config from DB", "scope", litestreamConfigScope, "error", err)
 		// Decide if this is fatal. Maybe Litestream is optional? For this example, we exit.
 		os.Exit(1)
 	}
 	if len(encryptedTomlData) == 0 {
-		app.Logger().Error("Litestream config data loaded from DB is empty", "scope", *litestreamScopeFlag)
+		app.Logger().Error("Litestream config data loaded from DB is empty", "scope", litestreamConfigScope)
 		os.Exit(1) // Exit if config is empty
 	}
 
 	// 2. Unmarshal TOML Config
 	var lsCfg litestream.Config
 	if err := toml.Unmarshal(encryptedTomlData, &lsCfg); err != nil {
-		app.Logger().Error("failed to unmarshal Litestream TOML config", "scope", *litestreamScopeFlag, "error", err)
+		app.Logger().Error("failed to unmarshal Litestream TOML config", "scope", litestreamConfigScope, "error", err)
 		os.Exit(1)
 	}
-	app.Logger().Info("Successfully unmarshalled Litestream config", "scope", *litestreamScopeFlag, "db_path", lsCfg.DBPath, "replica_count", len(lsCfg.Replicas))
+	app.Logger().Info("Successfully unmarshalled Litestream config", "scope", litestreamConfigScope, "db_path", lsCfg.DBPath, "replica_count", len(lsCfg.Replicas))
 
 	// 3. Ensure the DB path in the Litestream config matches the main app DB path
-	if lsCfg.DBPath != *dbPathFlag {
+	if lsCfg.DBPath != *dbPath {
 		app.Logger().Warn("Litestream config DB path differs from application DB path",
 			"litestream_db_path", lsCfg.DBPath,
-			"app_db_path", *dbPathFlag)
-		app.Logger().Info("Overriding Litestream DB path with application DB path", "new_path", *dbPathFlag)
-		lsCfg.DBPath = *dbPathFlag
+			"app_db_path", *dbPath)
+		app.Logger().Info("Overriding Litestream DB path with application DB path", "new_path", *dbPath)
+		lsCfg.DBPath = *dbPath
 	}
 
 	// 4. Instantiate Litestream
