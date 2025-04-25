@@ -19,8 +19,9 @@ const litestreamConfigScope = "litestream"
 
 func main() {
 	// --- Core Application Flags ---
-	dbPath := flag.String("dbpath", "app.db", "SQLite database file path")
-	ageKeyPath := flag.String("age-key", "", "Path to the age identity file (private key) for decrypting Litestream config (required if using Litestream)")
+	dbPathFlag := flag.String("dbpath", "app.db", "SQLite database file path")
+	ageKeyPathFlag := flag.String("age-key", "", "Path to the age identity file (private key) for decrypting Litestream config (required)")
+	litestreamScopeFlag := flag.String("litestream-scope", litestreamConfigScope, "Scope name for Litestream configuration in the database")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s -dbpath <path> -age-key <path> [flags]\n\n", os.Args[0])
@@ -83,7 +84,7 @@ func main() {
 		os.Exit(1) // Exit if config is empty
 	}
 
-	// 4. Unmarshal TOML Config
+	// 2. Unmarshal TOML Config
 	var lsCfg litestream.Config
 	if err := toml.Unmarshal(encryptedTomlData, &lsCfg); err != nil {
 		app.Logger().Error("failed to unmarshal Litestream TOML config", "scope", *litestreamScopeFlag, "error", err)
