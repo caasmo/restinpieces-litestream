@@ -9,7 +9,7 @@ import (
 
 	"github.com/benbjohnson/litestream"
 	"github.com/benbjohnson/litestream/file"
-	"github.com/benbjohnson/litestream/s3" 
+	"github.com/benbjohnson/litestream/s3"
 )
 
 // ReplicaConfig holds configuration for a single Litestream replica.
