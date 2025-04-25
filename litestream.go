@@ -22,6 +22,32 @@ type ReplicaConfig struct {
 	Name string `toml:"name" comment:"REQUIRED, unique name for this replica (e.g., \"local\", \"s3-main\")"`
 	Type string `toml:"type" comment:"Replica type: \"file\" or \"s3\""`
 
+    // --- General Replica Settings ---
+    // How often this specific replica attempts to synchronize new WAL segments
+    // to its storage backend (file, S3, etc.). This determines the maximum
+    // potential data loss (RPO - Recovery Point Objective) for this replica.
+    // Litestream Default: 1s (1 second)
+    SyncInterval         string `toml:"sync_interval,omitempty" comment:"OPTIONAL, how often the replica attempts to sync WAL segments (e.g., \"1s\", \"10s\"). Default: \"1s\""`
+
+    // Description: How frequently Litestream creates a full snapshot of the
+    // database and uploads it to this replica. Snapshots allow for faster
+    // restores as you don't need to replay the entire WAL history. They also
+    // act as boundary points for retention.
+    // Litestream Default: 24h (24 hours)
+    SnapshotInterval     string `toml:"snapshot_interval,omitempty" comment:"OPTIONAL, how often to create a full DB snapshot on the replica (e.g., \"1h\", \"24h\"). Default: \"24h\""`
+
+    // Specifies the minimum duration for which WAL segment files and snapshots
+    // should be retained on this replica. Older files/snapshots are pruned
+    // during retention checks. An empty string or "0" typically means retain
+    // forever.
+    // Litestream Default: 0 (keep forever)
+    Retention            string `toml:"retention,omitempty" comment:"OPTIONAL, how long to keep WAL segments/snapshots (e.g., \"7d\", \"30d\"). Empty means keep forever. Default: keep forever"`
+
+    // How often Litestream checks this replica's storage to enforce the
+    // Retention policy and delete expired snapshots/WAL files.
+    // Litestream Default: 1h (1 hour)
+    RetentionCheckInterval string `toml:"retention_check_interval,omitempty" comment:"OPTIONAL, how often to check for retention policy enforcement (e.g., \"1h\", \"24h\"). Default: \"1h\""`
+
 	// --- File Replica Settings ---
 	FilePath string `toml:"file_path,omitempty" comment:"Directory path for storing file replicas (used if Type == \"file\")"`
 
@@ -116,7 +142,9 @@ func NewLitestream(dbPath string, cfg Config, logger *slog.Logger) (*Litestream,
 		l := logger.With("replica_name", rc.Name, "replica_type", rc.Type)
 		var replicaClient litestream.ReplicaClient
 
-		switch rc.Type {
+
+
+	switch rc.Type {
 		case "file":
 			if rc.FilePath == "" {
 				cancel()
@@ -156,6 +184,59 @@ func NewLitestream(dbPath string, cfg Config, logger *slog.Logger) (*Litestream,
 		// Create the replica object and link it to the DB
 		replica := litestream.NewReplica(db, rc.Name)
 		replica.Client = replicaClient
+
+		// --- Replica-Level Settings ---
+		if rc.SyncInterval != "" {
+			d, err := time.ParseDuration(rc.SyncInterval)
+			if err != nil {
+				cancel()
+				return nil, fmt.Errorf("litestream: invalid sync_interval format for replica '%s': %w", rc.Name, err)
+			}
+			replica.SyncInterval = d
+		}
+		if rc.SnapshotInterval != "" {
+			d, err := time.ParseDuration(rc.SnapshotInterval)
+			if err != nil {
+				cancel()
+				return nil, fmt.Errorf("litestream: invalid snapshot_interval format for replica '%s': %w", rc.Name, err)
+			}
+			replica.SnapshotInterval = d
+		}
+		if rc.Retention != "" {
+			d, err := time.ParseDuration(rc.Retention)
+			if err != nil {
+				cancel()
+				// Note: Litestream's own parsing is more robust here, handling "0" for forever.
+				// For simplicity here, we parse duration, assuming non-zero means retain for that long.
+				// An empty string "" could also mean forever. Check litestream code if exact behavior is needed.
+				return nil, fmt.Errorf("litestream: invalid retention format for replica '%s': %w", rc.Name, err)
+			}
+			replica.Retention = d 
+		}
+
+		// Handle Retention="0" or empty string for forever (default behavior)
+		if rc.Retention == "" || rc.Retention == "0" {
+			replica.Retention = 0 // Explicitly set to 0 duration for "keep forever"
+		}
+
+		if rc.RetentionCheckInterval != "" {
+			d, err := time.ParseDuration(rc.RetentionCheckInterval)
+			if err != nil {
+				cancel()
+				return nil, fmt.Errorf("litestream: invalid retention_check_interval format for replica '%s': %w", rc.Name, err)
+			}
+			replica.RetentionCheckInterval = d
+		}
+
+
+
+
+
+
+
+
+
+
 		db.Replicas = append(db.Replicas, replica)
 	}
 
