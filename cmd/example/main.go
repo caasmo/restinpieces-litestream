@@ -82,9 +82,6 @@ func main() {
 // This function is the central place for defining the Litestream configuration,
 // including the database path and all desired replicas.
 func getConf(dbPath string) litestream.Config {
-	// Define multiple replicas here.
-	// IMPORTANT: Avoid hardcoding credentials in production. Use environment
-	// variables, secrets management, or a secure configuration system.
 	replicas := []litestream.ReplicaConfig{
 		{
 			Name:     "local_file", // Unique name for this replica
@@ -103,7 +100,6 @@ func getConf(dbPath string) litestream.Config {
 			S3ForcePathStyle:  false, // Set to true for MinIO or other S3-compatibles requiring path-style access
 			// S3SkipVerify:   true, // Uncomment if using self-signed certs (use with caution)
 		},
-		// Add more ReplicaConfig structs here for additional replicas if needed
 	}
 
 	// Log which replicas are being configured (optional)
