@@ -27,7 +27,7 @@ func generateBlueprintConfig() litestream.Config {
 			S3Bucket:          "your-s3-bucket-name",    // Placeholder: Your S3 bucket name
 			S3Region:          "your-s3-region",         // Placeholder: Your S3 bucket region
 			S3Path:            "backups/myapp",          // Optional: Path prefix in the bucket
-			S3Endpoint:        "",                       // Optional: Use for S3-compatible storage (e.g., MinIO URL)
+			S3Endpoint:        "endpoint",               // Optional: Use for S3-compatible storage (e.g., MinIO URL)
 			S3AccessKeyID:     "YOUR_ACCESS_KEY_ID",     // Placeholder: Set via env or secrets management
 			S3SecretAccessKey: "YOUR_SECRET_ACCESS_KEY", // Placeholder: Set via env or secrets management
 			S3ForcePathStyle:  false,                    // Set to true for MinIO or other S3-compatibles
@@ -38,7 +38,6 @@ func generateBlueprintConfig() litestream.Config {
 
 	// Create the main config struct (DBPath is removed)
 	cfg := litestream.Config{
-		// DBPath: "/path/to/your/database.db", // Removed: DBPath is now passed directly to NewLitestream
 		Replicas: replicas,
 	}
 
