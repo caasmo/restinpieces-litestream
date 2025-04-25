@@ -105,10 +105,6 @@ func NewLitestream(dbPath string, cfg Config, logger *slog.Logger) (*Litestream,
 			l.Info("Configured file replica client", "path", absFilePath)
 
 		case "s3":
-			if rc.S3Bucket == "" || rc.S3Region == "" { // Basic validation
-				cancel()
-				return nil, fmt.Errorf("litestream: S3Bucket and S3Region are required for S3 replica '%s'", rc.Name)
-			}
 			s3Client := s3.NewReplicaClient()
 			s3Client.Bucket = rc.S3Bucket
 			s3Client.Path = rc.S3Path

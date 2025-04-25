@@ -88,6 +88,7 @@ func main() {
 	// Log without db_path from config, as it's removed
 	app.Logger().Info("Successfully unmarshalled Litestream config", "scope", litestream.ConfigScope, "replica_count", len(lsCfg.Replicas))
 
+	app.Logger().Info("Litestream integration enabled", "conf", lsCfg)
 	// 4. Instantiate Litestream
 	ls, err = litestream.NewLitestream(*dbPath, lsCfg, app.Logger())
 	if err != nil {
