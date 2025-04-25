@@ -20,11 +20,11 @@ const litestreamConfigScope = "litestream"
 
 func main() {
 	// --- Core Application Flags ---
-	dbfile := flag.String("dbfile", "app.db", "SQLite database file path")
+	dbPath := flag.String("dbpath", "app.db", "SQLite database file path")
 	ageKeyPath := flag.String("age-key", "", "Path to the age identity file (private key) for decrypting Litestream config (required if using Litestream)")
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s -dbfile <path> -age-key <path> [flags]\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s -dbpath <path> -age-key <path> [flags]\n\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Start the restinpieces application server.\n\n")
 		fmt.Fprintf(os.Stderr, "Flags:\n")
 		flag.PrintDefaults()
@@ -32,15 +32,14 @@ func main() {
 
 	flag.Parse()
 
-	if *ageKeyPath == "" {
-		app.Logger().Error("Missing required flag: -age-key is needed for Litestream configuration")
-		flag.Usage() // Show usage instructions
+	if *dbPath == "" || *ageKeyPath == "" {
+		flag.Usage()
 		os.Exit(1)
 	}
 
 	// --- Create the Database Pool ---
 	// Use the helper from the library to create a pool with suitable defaults.
-	dbPool, err := restinpieces.NewZombiezenPool(*dbfile)
+	dbPool, err := restinpieces.NewZombiezenPool(*dbPath)
 	if err != nil {
 		slog.Error("failed to create database pool", "error", err)
 		os.Exit(1) // Exit if pool creation fails
