@@ -21,10 +21,8 @@ const litestreamConfigScope = "litestream"
 func main() {
 	// --- Core Application Flags ---
 	dbfile := flag.String("dbfile", "app.db", "SQLite database file path")
-	configFile := flag.String("config", "", "Path to main application configuration file (optional, can use DB)")
 	// --- Litestream Flags ---
-	ageKeyPathFlag := flag.String("age-key", "", "Path to the age identity file (private key) for decrypting Litestream config (required if using Litestream)")
-	litestreamScopeFlag := flag.String("litestream-scope", litestreamConfigScope, "Scope name for Litestream configuration in the database")
+	ageKeyPath := flag.String("age-key", "", "Path to the age identity file (private key) for decrypting Litestream config (required if using Litestream)")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s -dbfile <path> -age-key <path> [flags]\n\n", os.Args[0])
@@ -52,8 +50,8 @@ func main() {
 
 	// --- Initialize the Application ---
 	app, srv, err := restinpieces.New(
-		*configFile,
 		restinpieces.WithDbZombiezen(dbPool),
+		restinpieces.WithAgeKeyPath(*ageKeyPath),
 		restinpieces.WithRouterServeMux(),
 		restinpieces.WithCacheRistretto(),
 		restinpieces.WithTextLogger(nil),
