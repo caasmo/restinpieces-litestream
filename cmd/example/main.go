@@ -9,18 +9,15 @@ import (
 	"github.com/pelletier/go-toml/v2"
 
 	"github.com/caasmo/restinpieces"
-	// config and dbz imports removed as SecureConfigStore is used from app
 
 	"github.com/caasmo/restinpieces-litestream"
 )
 
-// litestreamConfigScope constant removed, use litestream.ConfigScope instead
 
 func main() {
 	// --- Core Application Flags ---
 	dbPath := flag.String("dbpath", "app.db", "SQLite database file path")
 	ageKeyPath := flag.String("age-key", "", "Path to the age identity file (private key) for decrypting Litestream config (required)")
-	// litestreamScopeFlag removed
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s -dbpath <path> -age-key <path> [flags]\n\n", os.Args[0])
@@ -92,18 +89,7 @@ func main() {
 	// Log without db_path from config, as it's removed
 	app.Logger().Info("Successfully unmarshalled Litestream config", "scope", litestream.ConfigScope, "replica_count", len(lsCfg.Replicas))
 
-	// 3. Ensure the DB path in the Litestream config matches the main app DB path - This check is no longer needed/possible here
-	/*
-	if lsCfg.DBPath != *dbPath {
-			"litestream_db_path", lsCfg.DBPath, // This field no longer exists
-			"app_db_path", *dbPath)
-		app.Logger().Info("Overriding Litestream DB path with application DB path", "new_path", *dbPath)
-		lsCfg.DBPath = *dbPath // This field no longer exists
-	}
-	*/
-
 	// 4. Instantiate Litestream
-	// Pass dbPath directly, along with the loaded config struct
 	ls, err = litestream.NewLitestream(*dbPath, lsCfg, app.Logger())
 	if err != nil {
 		// Error logged within NewLitestream
@@ -113,9 +99,7 @@ func main() {
 	// 5. Add Litestream as a Daemon
 	srv.AddDaemon(ls)
 	app.Logger().Info("Litestream daemon added to the server")
-	// End of Litestream setup block (no 'else' needed anymore)
 
-	// Start the server (which will also start Litestream if added)
 	srv.Run()
 
 	slog.Info("Server shut down gracefully.")
