@@ -72,12 +72,11 @@ func main() {
 	encryptedTomlData, err := app.SecureConfigStore().Latest(litestream.ConfigScope) // Use exported constant
 	if err != nil {
 		app.Logger().Error("failed to load Litestream config from DB", "scope", litestream.ConfigScope, "error", err)
-		// Decide if this is fatal. Maybe Litestream is optional? For this example, we exit.
 		os.Exit(1)
 	}
 	if len(encryptedTomlData) == 0 {
 		app.Logger().Error("Litestream config data loaded from DB is empty", "scope", litestream.ConfigScope)
-		os.Exit(1) // Exit if config is empty
+		os.Exit(1) 
 	}
 
 	// 2. Unmarshal TOML Config
@@ -92,7 +91,7 @@ func main() {
 	// 4. Instantiate Litestream
 	ls, err = litestream.NewLitestream(*dbPath, lsCfg, app.Logger())
 	if err != nil {
-		// Error logged within NewLitestream
+		app.Logger().Error("failed to init Litestream", "error", err)
 		os.Exit(1)
 	}
 
