@@ -38,7 +38,12 @@ type ReplicaConfig struct {
 // Config holds the main Litestream configuration for replicas.
 // The database path is passed separately during initialization.
 type Config struct {
-	// DBPath removed - pass directly to NewLitestream
+    // --- Database Monitoring & Checkpointing ---
+    MonitorInterval      string `toml:"monitor_interval,omitempty" comment:"OPTIONAL, how often to check the WAL for changes (e.g., \"1s\", \"250ms\"). Default: \"1s\""`
+    CheckpointInterval   string `toml:"checkpoint_interval,omitempty" comment:"OPTIONAL, how often to request a WAL checkpoint (e.g., \"1m\", \"5m\"). Default: \"1m\""`
+    MinCheckpointPageCount int `toml:"min_checkpoint_page_count,omitempty" comment:"OPTIONAL, minimum WAL size (in pages) before attempting a checkpoint. Default: 1000"`
+    MaxCheckpointPageCount int `toml:"max_checkpoint_page_count,omitempty" comment:"OPTIONAL, maximum WAL size (in pages) allowed before forcing a checkpoint. Default: 10000"`
+
 	Replicas []ReplicaConfig `toml:"replicas" comment:"Slice defining one or more replicas."`
 }
 
@@ -75,6 +80,30 @@ func NewLitestream(dbPath string, cfg Config, logger *slog.Logger) (*Litestream,
 	db.Logger = logger.With("db", dbPath) // Use dbPath argument
 	// Ensure the Replicas slice is initialized before appending
 	db.Replicas = make([]*litestream.Replica, 0, len(cfg.Replicas))
+
+	// --- DB-Level settings ---
+    if cfg.MonitorInterval != "" {
+        d, err := time.ParseDuration(cfg.MonitorInterval)
+        if err != nil {
+            cancel()
+            return nil, fmt.Errorf("litestream: invalid monitor_interval format: %w", err)
+        }
+        db.MonitorInterval = d
+    }
+    if cfg.CheckpointInterval != "" {
+        d, err := time.ParseDuration(cfg.CheckpointInterval)
+        if err != nil {
+            cancel()
+            return nil, fmt.Errorf("litestream: invalid checkpoint_interval format: %w", err)
+        }
+        db.CheckpointInterval = d
+    }
+    if cfg.MinCheckpointPageCount > 0 {
+        db.MinCheckpointPageCount = cfg.MinCheckpointPageCount
+    }
+    if cfg.MaxCheckpointPageCount > 0  {
+        db.MaxCheckpointPageCount = cfg.MaxCheckpointPageCount
+    }
 
 	// --- Configure Each Replica ---
 	for _, rc := range cfg.Replicas {
