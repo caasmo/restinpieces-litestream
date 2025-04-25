@@ -12,6 +12,10 @@ import (
 	"github.com/benbjohnson/litestream/s3"
 )
 
+// ConfigScope defines the default scope used when storing/retrieving
+// Litestream configuration securely (e.g., in a database).
+const ConfigScope = "litestream"
+
 // ReplicaConfig holds configuration for a single Litestream replica.
 type ReplicaConfig struct {
 	Name string `toml:"name" comment:"REQUIRED, unique name for this replica (e.g., \"local\", \"s3-main\")"`

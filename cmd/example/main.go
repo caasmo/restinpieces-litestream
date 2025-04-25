@@ -14,8 +14,7 @@ import (
 	"github.com/caasmo/restinpieces-litestream"
 )
 
-// Define a scope constant for Litestream config
-const litestreamConfigScope = "litestream"
+// litestreamConfigScope constant removed, use litestream.ConfigScope instead
 
 func main() {
 	// --- Core Application Flags ---
@@ -72,25 +71,25 @@ func main() {
 	app.Logger().Info("Litestream integration enabled")
 
 	// 1. Load Encrypted Config from DB using App's SecureConfigStore
-	app.Logger().Info("Loading Litestream configuration from database", "scope", litestreamConfigScope) // Use constant directly
-	encryptedTomlData, err := app.SecureConfigStore().Latest(litestreamConfigScope) // Use constant directly
+	app.Logger().Info("Loading Litestream configuration from database", "scope", litestream.ConfigScope) // Use exported constant
+	encryptedTomlData, err := app.SecureConfigStore().Latest(litestream.ConfigScope) // Use exported constant
 	if err != nil {
-		app.Logger().Error("failed to load Litestream config from DB", "scope", litestreamConfigScope, "error", err)
+		app.Logger().Error("failed to load Litestream config from DB", "scope", litestream.ConfigScope, "error", err)
 		// Decide if this is fatal. Maybe Litestream is optional? For this example, we exit.
 		os.Exit(1)
 	}
 	if len(encryptedTomlData) == 0 {
-		app.Logger().Error("Litestream config data loaded from DB is empty", "scope", litestreamConfigScope)
+		app.Logger().Error("Litestream config data loaded from DB is empty", "scope", litestream.ConfigScope)
 		os.Exit(1) // Exit if config is empty
 	}
 
 	// 2. Unmarshal TOML Config
 	var lsCfg litestream.Config
 	if err := toml.Unmarshal(encryptedTomlData, &lsCfg); err != nil {
-		app.Logger().Error("failed to unmarshal Litestream TOML config", "scope", litestreamConfigScope, "error", err)
+		app.Logger().Error("failed to unmarshal Litestream TOML config", "scope", litestream.ConfigScope, "error", err)
 		os.Exit(1)
 	}
-	app.Logger().Info("Successfully unmarshalled Litestream config", "scope", litestreamConfigScope, "db_path", lsCfg.DBPath, "replica_count", len(lsCfg.Replicas))
+	app.Logger().Info("Successfully unmarshalled Litestream config", "scope", litestream.ConfigScope, "db_path", lsCfg.DBPath, "replica_count", len(lsCfg.Replicas))
 
 	// 3. Ensure the DB path in the Litestream config matches the main app DB path
 	if lsCfg.DBPath != *dbPath {
