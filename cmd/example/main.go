@@ -53,7 +53,7 @@ func main() {
 		restinpieces.WithAgeKeyPath(*ageKeyPath), // Use renamed flag variable
 		restinpieces.WithRouterServeMux(),
 		restinpieces.WithCacheRistretto(),
-		restinpieces.WithTextLogger(nil),
+		restinpieces.WithTextLogger(&slog.HandlerOptions{Level: slog.LevelInfo}),
 	)
 	if err != nil {
 		slog.Error("failed to initialize application", "error", err)
