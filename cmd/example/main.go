@@ -63,13 +63,17 @@ func main() {
 	// --- Litestream Setup (Load from DB) ---
 	var ls *litestream.Litestream // Declare ls variable
 
-	// If no age key is provided, skip Litestream setup entirely.
+	// Age key is required for Litestream config decryption. Exit if not provided.
 	if *ageKeyPath == "" {
-		app.Logger().Info("Litestream integration disabled (no -age-key provided)")
-	} else {
-		app.Logger().Info("Litestream integration enabled via -age-key flag")
+		app.Logger().Error("Missing required flag: -age-key is needed for Litestream configuration")
+		flag.Usage() // Show usage instructions
+		os.Exit(1)
+	}
 
-		// 1. Get DB implementation (needed for SecureConfig)
+	// Proceed with Litestream setup since age key is present.
+	app.Logger().Info("Litestream integration enabled via -age-key flag")
+
+	// 1. Get DB implementation (needed for SecureConfig)
 		// We assume the Zombiezen DB is used as configured above.
 		// In a real app, you might need a more robust way to get the DB interface.
 		dbImpl, err := dbz.New(dbPool) // Create a new instance for SecureConfig
@@ -127,8 +131,7 @@ func main() {
 		// 6. Add Litestream as a Daemon
 		srv.AddDaemon(ls)
 		app.Logger().Info("Litestream daemon added to the server")
-	}
-	// End of Litestream setup block
+	// End of Litestream setup block (no 'else' needed anymore)
 
 	// Start the server (which will also start Litestream if added)
 	srv.Run()
