@@ -21,7 +21,6 @@ const litestreamConfigScope = "litestream"
 func main() {
 	// --- Core Application Flags ---
 	dbfile := flag.String("dbfile", "app.db", "SQLite database file path")
-	// --- Litestream Flags ---
 	ageKeyPath := flag.String("age-key", "", "Path to the age identity file (private key) for decrypting Litestream config (required if using Litestream)")
 
 	flag.Usage = func() {
