@@ -17,14 +17,22 @@ func generateBlueprintConfig() litestream.Config {
 	// Define example replicas
 	replicas := []litestream.ReplicaConfig{
 		{
-			Name:     "local_file_example", // Unique name for this replica
-			Type:     "file",
-			FilePath: "/path/to/your/local/replicas", // Placeholder: Local directory for backup
+			Name:                   "local_file_example", // Unique name for this replica
+			Type:                   "file",
+			FilePath:               "/path/to/your/local/replicas", // Placeholder: Local directory for backup
+			SyncInterval:           "1s",                           // Optional: Default is 1s
+			SnapshotInterval:       "24h",                          // Optional: Default is 24h
+			Retention:              "",                             // Optional: Default is keep forever
+			RetentionCheckInterval: "1h",                           // Optional: Default is 1h
 		},
 		{
-			Name:              "s3_backup_example", // Unique name for the S3 replica
-			Type:              "s3",
-			S3Bucket:          "your-s3-bucket-name",    // Placeholder: Your S3 bucket name
+			Name:                   "s3_backup_example", // Unique name for the S3 replica
+			Type:                   "s3",
+			SyncInterval:           "10s",                         // Optional: Example override (Default is 1s)
+			SnapshotInterval:       "1h",                          // Optional: Example override (Default is 24h)
+			Retention:              "7d",                          // Optional: Example override (Default is keep forever)
+			RetentionCheckInterval: "1h",                          // Optional: Default is 1h
+			S3Bucket:               "your-s3-bucket-name",         // Placeholder: Your S3 bucket name
 			S3Region:          "your-s3-region",         // Placeholder: Your S3 bucket region
 			S3Path:            "backups/myapp",          // Optional: Path prefix in the bucket
 			S3Endpoint:        "endpoint",               // Optional: Use for S3-compatible storage (e.g., MinIO URL)
