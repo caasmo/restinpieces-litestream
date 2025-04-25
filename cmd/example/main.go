@@ -6,11 +6,10 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/pelletier/go-toml/v2" // Added for TOML unmarshalling
+	"github.com/pelletier/go-toml/v2"
 
 	"github.com/caasmo/restinpieces"
-	"github.com/caasmo/restinpieces/config" // Added for SecureConfig
-	dbz "github.com/caasmo/restinpieces/db/zombiezen" // Added for DB implementation access
+	// config and dbz imports removed as SecureConfigStore is used from app
 
 	"github.com/caasmo/restinpieces-litestream"
 )
@@ -32,14 +31,13 @@ func main() {
 
 	flag.Parse()
 
-	if *dbPath == "" || *ageKeyPath == "" {
+	if *dbPathFlag == "" || *ageKeyPathFlag == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
 
 	// --- Create the Database Pool ---
-	// Use the helper from the library to create a pool with suitable defaults.
-	dbPool, err := restinpieces.NewZombiezenPool(*dbPath)
+	dbPool, err := restinpieces.NewZombiezenPool(*dbPathFlag)
 	if err != nil {
 		slog.Error("failed to create database pool", "error", err)
 		os.Exit(1) // Exit if pool creation fails
@@ -55,7 +53,7 @@ func main() {
 	// --- Initialize the Application ---
 	app, srv, err := restinpieces.New(
 		restinpieces.WithDbZombiezen(dbPool),
-		restinpieces.WithAgeKeyPath(*ageKeyPath),
+		restinpieces.WithAgeKeyPath(*ageKeyPathFlag), // Use flag variable
 		restinpieces.WithRouterServeMux(),
 		restinpieces.WithCacheRistretto(),
 		restinpieces.WithTextLogger(nil),
@@ -70,27 +68,11 @@ func main() {
 
 
 	// Proceed with Litestream setup since age key is present.
-	app.Logger().Info("Litestream integration enabled via -age-key flag")
+	app.Logger().Info("Litestream integration enabled")
 
-	// 1. Get DB implementation (needed for SecureConfig)
-	// We assume the Zombiezen DB is used as configured above.
-	// In a real app, you might need a more robust way to get the DB interface.
-	dbImpl, err := dbz.New(dbPool) // Create a new instance for SecureConfig
-	if err != nil {
-		app.Logger().Error("failed to instantiate zombiezen db for secure config", "error", err)
-		os.Exit(1)
-	}
-
-	// 2. Instantiate SecureConfig
-	secureCfg, err := config.NewSecureConfigAge(dbImpl, *ageKeyPathFlag, app.Logger())
-	if err != nil {
-		app.Logger().Error("failed to instantiate secure config (age) for Litestream", "error", err)
-		os.Exit(1)
-	}
-
-	// 3. Load Encrypted Config from DB
+	// 1. Load Encrypted Config from DB using App's SecureConfigStore
 	app.Logger().Info("Loading Litestream configuration from database", "scope", *litestreamScopeFlag)
-	encryptedTomlData, err := secureCfg.Latest(*litestreamScopeFlag)
+	encryptedTomlData, err := app.SecureConfigStore().Latest(*litestreamScopeFlag)
 	if err != nil {
 		app.Logger().Error("failed to load Litestream config from DB", "scope", *litestreamScopeFlag, "error", err)
 		// Decide if this is fatal. Maybe Litestream is optional? For this example, we exit.
@@ -109,25 +91,23 @@ func main() {
 	}
 	app.Logger().Info("Successfully unmarshalled Litestream config", "scope", *litestreamScopeFlag, "db_path", lsCfg.DBPath, "replica_count", len(lsCfg.Replicas))
 
-	// Ensure the DB path in the Litestream config matches the main app DB path
-	if lsCfg.DBPath != *dbfile {
+	// 3. Ensure the DB path in the Litestream config matches the main app DB path
+	if lsCfg.DBPath != *dbPathFlag {
 		app.Logger().Warn("Litestream config DB path differs from application DB path",
-		"litestream_db_path", lsCfg.DBPath,
-		"app_db_path", *dbfile)
-		// Optionally override or exit based on policy. Here we override.
-		app.Logger().Info("Overriding Litestream DB path with application DB path", "new_path", *dbfile)
-		lsCfg.DBPath = *dbfile
+			"litestream_db_path", lsCfg.DBPath,
+			"app_db_path", *dbPathFlag)
+		app.Logger().Info("Overriding Litestream DB path with application DB path", "new_path", *dbPathFlag)
+		lsCfg.DBPath = *dbPathFlag
 	}
 
-
-	// 5. Instantiate Litestream
+	// 4. Instantiate Litestream
 	ls, err = litestream.NewLitestream(lsCfg, app.Logger())
 	if err != nil {
 		// Error logged within NewLitestream
 		os.Exit(1)
 	}
 
-	// 6. Add Litestream as a Daemon
+	// 5. Add Litestream as a Daemon
 	srv.AddDaemon(ls)
 	app.Logger().Info("Litestream daemon added to the server")
 	// End of Litestream setup block (no 'else' needed anymore)
