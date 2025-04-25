@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 	"path/filepath"
 
 	"github.com/benbjohnson/litestream"
@@ -38,11 +39,17 @@ type ReplicaConfig struct {
 // Config holds the main Litestream configuration for replicas.
 // The database path is passed separately during initialization.
 type Config struct {
-    // --- Database Monitoring & Checkpointing ---
+
+    // How frequently Litestream checks the SQLite WAL (Write-Ahead Log) file
+    // index for changes. More frequent checks mean lower latency for detecting
+    // new commits but slightly higher overhead. Litestream Default: 1s (1 second)
     MonitorInterval      string `toml:"monitor_interval,omitempty" comment:"OPTIONAL, how often to check the WAL for changes (e.g., \"1s\", \"250ms\"). Default: \"1s\""`
+
+    // How often Litestream requests SQLite to perform a WAL checkpoint
+    // (PASSIVE mode). Checkpointing moves changes from the WAL file back into
+    // the main database file. This helps keep the WAL file size manageable.
+    // Litestream Default: 1m (1 minute)
     CheckpointInterval   string `toml:"checkpoint_interval,omitempty" comment:"OPTIONAL, how often to request a WAL checkpoint (e.g., \"1m\", \"5m\"). Default: \"1m\""`
-    MinCheckpointPageCount int `toml:"min_checkpoint_page_count,omitempty" comment:"OPTIONAL, minimum WAL size (in pages) before attempting a checkpoint. Default: 1000"`
-    MaxCheckpointPageCount int `toml:"max_checkpoint_page_count,omitempty" comment:"OPTIONAL, maximum WAL size (in pages) allowed before forcing a checkpoint. Default: 10000"`
 
 	Replicas []ReplicaConfig `toml:"replicas" comment:"Slice defining one or more replicas."`
 }
@@ -97,12 +104,6 @@ func NewLitestream(dbPath string, cfg Config, logger *slog.Logger) (*Litestream,
             return nil, fmt.Errorf("litestream: invalid checkpoint_interval format: %w", err)
         }
         db.CheckpointInterval = d
-    }
-    if cfg.MinCheckpointPageCount > 0 {
-        db.MinCheckpointPageCount = cfg.MinCheckpointPageCount
-    }
-    if cfg.MaxCheckpointPageCount > 0  {
-        db.MaxCheckpointPageCount = cfg.MaxCheckpointPageCount
     }
 
 	// --- Configure Each Replica ---
