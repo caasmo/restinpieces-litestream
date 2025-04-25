@@ -38,7 +38,9 @@ func generateBlueprintConfig() litestream.Config {
 
 	// Create the main config struct (DBPath is removed)
 	cfg := litestream.Config{
-		Replicas: replicas,
+		MonitorInterval:    "1s", // Default Litestream value
+		CheckpointInterval: "1m", // Default Litestream value
+		Replicas:           replicas,
 	}
 
 	return cfg
