@@ -36,6 +36,16 @@ Refer to [cmd/example/main.go](./cmd/example/main.go) to see how to:
 *   Instantiate the `litestream.Litestream` service.
 *   Add it as a daemon to the `restinpieces.Server`.
 
+## CGO Driver Compatibility
+
+**Important:** The underlying [Litestream library](https://github.com/benbjohnson/litestream) uses the [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3) driver, which relies on CGO.
+
+If your main application uses a different CGO-based SQLite driver, such as [crawshaw.io/sqlite](https://crawshaw.io/sqlite), you will encounter compilation errors due to conflicting CGO definitions.
+
+The `restinpieces` framework provides a separate database implementation for the Crawshaw driver here: [caasmo/restinpieces-sqlite-crawshaw](https://github.com/caasmo/restinpieces-sqlite-crawshaw).
+
+**You cannot use this `restinpieces-litestream` module if your application is built with the Crawshaw SQLite driver (or another conflicting CGO driver).** Litestream currently requires `mattn/go-sqlite3`.
+
 ## SQLite PRAGMAs for Litestream
 
 Consider setting the following PRAGMAs in your application when initializing the database connection for optimal performance and compatibility with Litestream:
