@@ -14,7 +14,19 @@ Litestream configuration is managed securely through the restinpieces `SecureCon
 
 2.  **Customize:** Edit the generated `litestream.blueprint.toml` file with your specific replica settings (e.g., S3 bucket, region, credentials). **Note:** The `db_path` is not set in the config file; it's provided by the main application during initialization.
 
-3.  **Encrypt and Store:** Use a separate mechanism (e.g., a dedicated script or the restinpieces config management tools) to encrypt this TOML file using your age key and store it in the database under the scope defined by `litestream.ConfigScope` (default: "litestream").
+3.  **Encrypt and Store:** Use the `insert-config` tool provided by the [restinpieces](https://github.com/caasmo/restinpieces) framework to encrypt the TOML file using your age key and store it in the database. Use the scope defined by `litestream.ConfigScope` (default: "litestream"). Example:
+    ```bash
+    # Assuming insert-config is built and in your PATH
+    # and restinpieces is in your GOPATH
+    go build -o bin/insert-config ../restinpieces/cmd/insert-config
+    ./bin/insert-config \
+      -age-key /path/to/your/age.key \
+      -db /path/to/your/app.db \
+      -file litestream.blueprint.toml \
+      -scope litestream \
+      -format toml \
+      -desc "Initial Litestream configuration"
+    ```
 
 ## Integration Example
 
