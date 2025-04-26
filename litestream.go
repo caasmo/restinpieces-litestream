@@ -72,10 +72,10 @@ type Config struct {
 	MonitorInterval string `toml:"monitor_interval,omitempty" comment:"OPTIONAL, how often to check the WAL for changes (e.g., \"1s\", \"250ms\"). Default: \"1s\""`
 
 	// How often Litestream requests SQLite to perform a WAL checkpoint
-	// (PASSIVE mode). Checkpointing moves changes from the WAL file back into
-	// the main database file. This helps keep the WAL file size manageable.
-	// Litestream Default: 1m (1 minute)
-	CheckpointInterval string `toml:"checkpoint_interval,omitempty" comment:"OPTIONAL, how often to request a WAL checkpoint (e.g., \"1m\", \"5m\"). Default: \"1m\""`
+	// using TRUNCATE mode. This moves changes from the WAL file back into the
+	// main database file and truncates the WAL. Requires a brief writer lock.
+	// Helps keep the WAL file size manageable. Litestream Default: 1m (1 minute)
+	CheckpointInterval string `toml:"checkpoint_interval,omitempty" comment:"OPTIONAL, how often to request a WAL checkpoint (TRUNCATE mode) (e.g., \"1m\", \"5m\"). Default: \"1m\""`
 
 	Replicas []ReplicaConfig `toml:"replicas" comment:"Slice defining one or more replicas."`
 }
