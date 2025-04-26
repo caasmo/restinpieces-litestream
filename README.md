@@ -36,15 +36,23 @@ Refer to [cmd/example/main.go](./cmd/example/main.go) to see how to:
 *   Instantiate the `litestream.Litestream` service.
 *   Add it as a daemon to the `restinpieces.Server`.
 
-## CGO Driver Compatibility
+## Driver Compatibility (CGO vs Pure-Go)
 
-**Important:** The underlying [Litestream library](https://github.com/benbjohnson/litestream) uses the [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3) driver, which relies on CGO.
+**Important:** The underlying [Litestream library](https://github.com/benbjohnson/litestream) internally uses the [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3) driver, which relies on CGO. This is a dependency of Litestream itself.
 
-If your main application uses a different CGO-based SQLite driver, such as [crawshaw.io/sqlite](https://crawshaw.io/sqlite), you will encounter compilation errors due to conflicting CGO definitions.
+**Using Pure-Go Drivers:**
+You **can** use this `restinpieces-litestream` module even if your main application uses a pure-Go SQLite driver for its database operations, such as:
+*   [zombiezen.com/go/sqlite](https://zombiezen.com/go/sqlite) (the default in `restinpieces`)
+*   [modernc.org/sqlite](https://modernc.org/sqlite)
 
-The `restinpieces` framework provides a separate database implementation for the Crawshaw driver here: [caasmo/restinpieces-sqlite-crawshaw](https://github.com/caasmo/restinpieces-sqlite-crawshaw).
+The CGO dependency of Litestream does not conflict with pure-Go drivers used by the rest of your application.
 
-**You cannot use this `restinpieces-litestream` module if your application is built with the Crawshaw SQLite driver (or another conflicting CGO driver).** Litestream currently requires `mattn/go-sqlite3`.
+**Using Other CGO Drivers:**
+You will encounter compilation errors if your main application attempts to use a *different* CGO-based SQLite driver simultaneously, such as [crawshaw.io/sqlite](https://crawshaw.io/sqlite). This is because Go does not permit linking multiple different CGO implementations of SQLite within the same binary.
+
+The `restinpieces` framework provides a separate database implementation for the Crawshaw driver here: [caasmo/restinpieces-sqlite-crawshaw](https://github.com/caasmo/restinpieces-sqlite-crawshaw). However, you cannot use it in the same application build as this Litestream module.
+
+**In summary:** This module works fine with pure-Go SQLite drivers but conflicts with other CGO-based SQLite drivers like Crawshaw's.
 
 ## SQLite PRAGMAs for Litestream
 
