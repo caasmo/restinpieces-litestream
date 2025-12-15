@@ -4,176 +4,130 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
-	"time"
 
 	"github.com/benbjohnson/litestream"
+	"github.com/benbjohnson/litestream/abs"
+	"github.com/benbjohnson/litestream/config"
 	"github.com/benbjohnson/litestream/file"
+	"github.com/benbjohnson/litestream/gs"
+	"github.com/benbjohnson/litestream/nats"
+	"github.com/benbjohnson/litestream/oss"
 	"github.com/benbjohnson/litestream/s3"
+	"github.com/benbjohnson/litestream/sftp"
+	"github.com/benbjohnson/litestream/setup"
 )
 
 // ConfigScope defines the default scope used when storing/retrieving
 // Litestream configuration securely (e.g., in a database).
 const ConfigScope = "litestream"
 
-
+// watchable is a helper struct to hold information about database directories
+// that need to be monitored for changes.
+type watchable struct {
+	config *config.DBConfig
+	dbs    []*litestream.DB
+}
 
 // Litestream handles continuous database backups for potentially multiple replicas.
 type Litestream struct {
-	store  *litestream.Store // The Store object is now the central orchestrator
+	store  *litestream.Store
 	logger *slog.Logger
 
-	// ctx controls the lifecycle of the backup process
-	ctx context.Context
-
-	// cancel stops the backup process
-	cancel context.CancelFunc
-
-	// shutdownDone signals when backup has completely stopped
+	// Daemon lifecycle management, required by the restinpieces framework.
+	ctx          context.Context
+	cancel       context.CancelFunc
 	shutdownDone chan struct{}
+
+	// Information to start directory monitors, populated in New() and consumed by Start().
+	watchables []watchable
+
+	// Holds the running directory monitors so they can be closed by Stop().
+	directoryMonitors []*setup.DirectoryMonitor
 }
 
-// NewLitestream creates a new Litestream instance configured according to cfg.
-// It sets up the database object and initializes all replicas defined in cfg.Replicas.
-// The dbPath specifies the database file to back up.
-func NewLitestream(dbPath string, cfg Config, logger *slog.Logger) (*Litestream, error) {
-	if dbPath == "" {
-		return nil, fmt.Errorf("litestream: dbPath cannot be empty")
+// NewLitestream creates a new Litestream instance from a configuration object.
+func NewLitestream(cfg *config.Config, logger *slog.Logger) (*Litestream, error) {
+	// Setup databases.
+	if len(cfg.DBs) == 0 {
+		return nil, fmt.Errorf("no databases specified in configuration")
 	}
-	if len(cfg.Replicas) == 0 {
-		return nil, fmt.Errorf("litestream: no replicas configured")
+
+	var dbs []*litestream.DB
+	var watchables []watchable
+	for _, dbConfig := range cfg.DBs {
+		// Handle directory configuration
+		if dbConfig.Dir != "" {
+			dirDbs, err := setup.NewDBsFromDirectoryConfig(dbConfig)
+			if err != nil {
+				return nil, err
+			}
+			dbs = append(dbs, dirDbs...)
+			logger.Info("found databases in directory", "dir", dbConfig.Dir, "count", len(dirDbs), "watch", dbConfig.Watch)
+			if dbConfig.Watch {
+				watchables = append(watchables, watchable{config: dbConfig, dbs: dirDbs})
+			}
+		} else {
+			// Handle single database configuration
+			db, err := setup.NewDBFromConfig(dbConfig)
+			if err != nil {
+				return nil, err
+			}
+			dbs = append(dbs, db)
+		}
+	}
+
+	levels := cfg.CompactionLevels()
+	store := litestream.NewStore(dbs, levels)
+	// Only override default snapshot interval if explicitly set in config
+	if cfg.Snapshot.Interval != nil {
+		store.SnapshotInterval = *cfg.Snapshot.Interval
+	}
+	// Only override default snapshot retention if explicitly set in config
+	if cfg.Snapshot.Retention != nil {
+		store.SnapshotRetention = *cfg.Snapshot.Retention
+	}
+	if cfg.L0Retention != nil {
+		store.SetL0Retention(*cfg.L0Retention)
+	}
+	if cfg.L0RetentionCheckInterval != nil {
+		store.L0RetentionCheckInterval = *cfg.L0RetentionCheckInterval
+	}
+
+	// Notify user that initialization is done.
+	for _, db := range store.DBs() {
+		r := db.Replica
+		logger.Info("initialized db", "path", db.Path())
+		slogWith := logger.With("type", r.Client.Type(), "sync-interval", r.SyncInterval)
+		switch client := r.Client.(type) {
+		case *file.ReplicaClient:
+			slogWith.Info("replicating to", "path", client.Path())
+		case *s3.ReplicaClient:
+			slogWith.Info("replicating to", "bucket", client.Bucket, "path", client.Path, "region", client.Region, "endpoint", client.Endpoint)
+		case *gs.ReplicaClient:
+			slogWith.Info("replicating to", "bucket", client.Bucket, "path", client.Path)
+		case *abs.ReplicaClient:
+			slogWith.Info("replicating to", "bucket", client.Bucket, "path", client.Path, "endpoint", client.Endpoint)
+		case *sftp.ReplicaClient:
+			slogWith.Info("replicating to", "host", client.Host, "user", client.User, "path", client.Path)
+		case *nats.ReplicaClient:
+			slogWith.Info("replicating to", "bucket", client.BucketName, "url", client.URL)
+		case *oss.ReplicaClient:
+			slogWith.Info("replicating to", "bucket", client.Bucket, "path", client.Path, "region", client.Region)
+		default:
+			slogWith.Info("replicating to")
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	db := litestream.NewDB(dbPath)        // Use dbPath argument
-	db.Logger = logger.With("db", dbPath) // Use dbPath argument
-	// Ensure the Replicas slice is initialized before appending
-	db.Replicas = make([]*litestream.Replica, 0, len(cfg.Replicas))
-
-	// --- DB-Level settings ---
-	if cfg.MonitorInterval != "" {
-		d, err := time.ParseDuration(cfg.MonitorInterval)
-		if err != nil {
-			cancel()
-			return nil, fmt.Errorf("litestream: invalid monitor_interval format: %w", err)
-		}
-		db.MonitorInterval = d
-	}
-	if cfg.CheckpointInterval != "" {
-		d, err := time.ParseDuration(cfg.CheckpointInterval)
-		if err != nil {
-			cancel()
-			return nil, fmt.Errorf("litestream: invalid checkpoint_interval format: %w", err)
-		}
-		db.CheckpointInterval = d
-	}
-
-	// --- Configure Each Replica ---
-	for _, rc := range cfg.Replicas {
-		if rc.Name == "" {
-			cancel()
-			return nil, fmt.Errorf("litestream: replica name is required but missing for type '%s'", rc.Type)
-		}
-
-		l := logger.With("replica_name", rc.Name, "replica_type", rc.Type)
-		var replicaClient litestream.ReplicaClient
-
-		switch rc.Type {
-		case "file":
-			if rc.FilePath == "" {
-				cancel()
-				return nil, fmt.Errorf("litestream: FilePath is required for file replica '%s'", rc.Name)
-			}
-			if err := os.MkdirAll(rc.FilePath, 0750); err != nil && !os.IsExist(err) {
-				cancel()
-				return nil, fmt.Errorf("litestream: failed to create file replica directory '%s' for replica '%s': %w", rc.FilePath, rc.Name, err)
-			}
-			absFilePath, err := filepath.Abs(rc.FilePath)
-			if err != nil {
-				cancel()
-				return nil, fmt.Errorf("litestream: failed to get absolute path for file replica '%s' path '%s': %w", rc.Name, rc.FilePath, err)
-			}
-			replicaClient = file.NewReplicaClient(absFilePath)
-			l.Info("Configured file replica client", "path", absFilePath)
-
-		case "s3":
-			s3Client := s3.NewReplicaClient()
-			s3Client.Bucket = rc.S3Bucket
-			s3Client.Path = rc.S3Path
-			s3Client.Region = rc.S3Region
-			s3Client.Endpoint = rc.S3Endpoint
-			s3Client.AccessKeyID = rc.S3AccessKeyID
-			s3Client.SecretAccessKey = rc.S3SecretAccessKey
-			s3Client.ForcePathStyle = rc.S3ForcePathStyle
-			// s3Client.SkipVerify = rc.S3SkipVerify // Add if needed
-
-			replicaClient = s3Client
-			l.Info("Configured S3 replica client", "endpoint", rc.S3Endpoint, "bucket", rc.S3Bucket, "path", rc.S3Path, "region", rc.S3Region)
-
-		default:
-			cancel()
-			return nil, fmt.Errorf("litestream: unsupported replica type '%s' for replica '%s'", rc.Type, rc.Name)
-		}
-
-		// Create the replica object and link it to the DB
-		replica := litestream.NewReplica(db, rc.Name)
-		replica.Client = replicaClient
-
-		// --- Replica-Level Settings ---
-		if rc.SyncInterval != "" {
-			d, err := time.ParseDuration(rc.SyncInterval)
-			if err != nil {
-				cancel()
-				return nil, fmt.Errorf("litestream: invalid sync_interval format for replica '%s': %w", rc.Name, err)
-			}
-			replica.SyncInterval = d
-		}
-		if rc.SnapshotInterval != "" {
-			d, err := time.ParseDuration(rc.SnapshotInterval)
-			if err != nil {
-				cancel()
-				return nil, fmt.Errorf("litestream: invalid snapshot_interval format for replica '%s': %w", rc.Name, err)
-			}
-			replica.SnapshotInterval = d
-		}
-		if rc.Retention != "" {
-			d, err := time.ParseDuration(rc.Retention)
-			if err != nil {
-				cancel()
-				// Note: Litestream's own parsing is more robust here, handling "0" for forever.
-				// For simplicity here, we parse duration, assuming non-zero means retain for that long.
-				// An empty string "" could also mean forever. Check litestream code if exact behavior is needed.
-				return nil, fmt.Errorf("litestream: invalid retention format for replica '%s': %w", rc.Name, err)
-			}
-			replica.Retention = d
-		}
-
-		// Handle Retention="0" or empty string for forever (default behavior)
-		if rc.Retention == "" || rc.Retention == "0" {
-			replica.Retention = 0 // Explicitly set to 0 duration for "keep forever"
-		}
-
-		if rc.RetentionCheckInterval != "" {
-			d, err := time.ParseDuration(rc.RetentionCheckInterval)
-			if err != nil {
-				cancel()
-				return nil, fmt.Errorf("litestream: invalid retention_check_interval format for replica '%s': %w", rc.Name, err)
-			}
-			replica.RetentionCheckInterval = d
-		}
-
-		db.Replicas = append(db.Replicas, replica)
-	}
-
 	return &Litestream{
-		config:       cfg,
-		logger:       logger,
-		db:           db, // DB now holds the configured replicas
-		ctx:          ctx,
-		cancel:       cancel,
-		shutdownDone: make(chan struct{}),
+		store:             store,
+		logger:            logger,
+		ctx:               ctx,
+		cancel:            cancel,
+		shutdownDone:      make(chan struct{}),
+		watchables:        watchables,
+		directoryMonitors: make([]*setup.DirectoryMonitor, 0),
 	}, nil
 }
 
