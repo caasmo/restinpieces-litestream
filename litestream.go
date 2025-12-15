@@ -82,11 +82,10 @@ type Config struct {
 
 // Litestream handles continuous database backups for potentially multiple replicas.
 type Litestream struct {
-	config Config // Store the main config
+	store  *litestream.Store // The Store object is now the central orchestrator
 	logger *slog.Logger
-	db     *litestream.DB // The DB object holds the list of replicas internally
 
-	// ctx controls the lifecycle of the backup process for all replicas
+	// ctx controls the lifecycle of the backup process
 	ctx context.Context
 
 	// cancel stops the backup process
