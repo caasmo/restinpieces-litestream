@@ -8,7 +8,7 @@ This module uses the standard `litestream.yml` configuration format. Litestream 
 
 1.  **Create a `litestream.yml` file:** Create a standard Litestream configuration file. You can find examples and a full reference in the [official Litestream configuration documentation](https://litestream.io/reference/config/).
 
-2.  **Encrypt and Store with `ripc`:** Use the `ripc config save` command to encrypt and store your YAML file in the application's database. The scope must be `litestream`, as defined by `litestream.ConfigScope`.
+2.  **Encrypt and Store with `ripc`:** For simplicity and security, the `restinpieces` framework encrypts and stores all configuration directly within the main application SQLite database. Use the `ripc config save` command to perform this action for your Litestream configuration. The scope must be `litestream`, as defined by `litestream.ConfigScope`.
 
     ```bash
     ripc -age-key /path/to/your/age.key -dbpath /path/to/your/app.db config save -scope litestream /path/to/your/litestream.yml
@@ -17,7 +17,9 @@ This module uses the standard `litestream.yml` configuration format. Litestream 
 
 ## Logging
 
-The logging integration is designed as a pragmatic compromise to avoid maintaining a complex fork of the upstream Litestream library.
+The upstream Litestream project is designed primarily as a standalone binary. This architecture makes it difficult to cleanly inject a custom `slog.Logger` when using Litestream as an embedded library, as its internal components fall back to a global default logger.
+
+To solve this without requiring a heavily modified and hard-to-maintain fork, this module uses a "split-logging" model. Our compromise is to expose Litestream's own logging configuration, allowing us to control its output separately from the main framework logger.
 
 This module follows a **"split-logging"** model:
 
