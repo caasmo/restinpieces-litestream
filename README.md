@@ -62,6 +62,8 @@ This is a major advantage as it means this module has **no CGO dependency**.
 *   Cross-compilation is simple.
 *   There are no conflicts with any other SQLite drivers (whether pure-Go or CGO-based) that your main application might use.
 
+This aligns perfectly with the `restinpieces` framework, whose default database driver is [zombiezen.com/go/sqlite](https://zombiezen.com/go/sqlite), which is also a pure-Go driver. This ensures a CGO-free environment when using the default settings for both the framework and this module.
+
 ## SQLite PRAGMAs for Litestream
 
 Consider setting the following PRAGMAs in your application when initializing the database connection for optimal performance and compatibility with Litestream:
