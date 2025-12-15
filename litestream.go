@@ -17,68 +17,7 @@ import (
 // Litestream configuration securely (e.g., in a database).
 const ConfigScope = "litestream"
 
-// ReplicaConfig holds configuration for a single Litestream replica.
-type ReplicaConfig struct {
-	Name string `toml:"name" comment:"REQUIRED, unique name for this replica (e.g., \"local\", \"s3-main\")"`
-	Type string `toml:"type" comment:"Replica type: \"file\" or \"s3\""`
 
-	// --- General Replica Settings ---
-	// How often this specific replica attempts to synchronize new WAL segments
-	// to its storage backend (file, S3, etc.). This determines the maximum
-	// potential data loss (RPO - Recovery Point Objective) for this replica.
-	// Litestream Default: 1s (1 second)
-	SyncInterval string `toml:"sync_interval,omitempty" comment:"OPTIONAL, how often the replica attempts to sync WAL segments (e.g., \"1s\", \"10s\"). Default: \"1s\""`
-
-	// Description: How frequently Litestream creates a full snapshot of the
-	// database and uploads it to this replica. Snapshots allow for faster
-	// restores as you don't need to replay the entire WAL history. They also
-	// act as boundary points for retention.
-	// Litestream Default: 24h (24 hours)
-	SnapshotInterval string `toml:"snapshot_interval,omitempty" comment:"OPTIONAL, how often to create a full DB snapshot on the replica (e.g., \"1h\", \"24h\"). Default: \"24h\""`
-
-	// Specifies the minimum duration for which WAL segment files and snapshots
-	// should be retained on this replica. Older files/snapshots are pruned
-	// during retention checks. An empty string or "0" typically means retain
-	// forever.
-	// Litestream Default: 0 (keep forever)
-	Retention string `toml:"retention,omitempty" comment:"OPTIONAL, how long to keep WAL segments/snapshots (e.g., \"7d\", \"30d\"). Empty means keep forever. Default: keep forever"`
-
-	// How often Litestream checks this replica's storage to enforce the
-	// Retention policy and delete expired snapshots/WAL files.
-	// Litestream Default: 1h (1 hour)
-	RetentionCheckInterval string `toml:"retention_check_interval,omitempty" comment:"OPTIONAL, how often to check for retention policy enforcement (e.g., \"1h\", \"24h\"). Default: \"1h\""`
-
-	// --- File Replica Settings ---
-	FilePath string `toml:"file_path,omitempty" comment:"Directory path for storing file replicas (used if Type == \"file\")"`
-
-	// --- S3 Replica Settings ---
-	S3Endpoint        string `toml:"s3_endpoint,omitempty" comment:"S3 API endpoint (e.g., \"s3.amazonaws.com\" or MinIO address)"`
-	S3Region          string `toml:"s3_region,omitempty" comment:"S3 region (e.g., \"us-east-1\")"`
-	S3Bucket          string `toml:"s3_bucket,omitempty" comment:"S3 bucket name"`
-	S3Path            string `toml:"s3_path,omitempty" comment:"Optional path prefix within the bucket"`
-	S3AccessKeyID     string `toml:"s3_access_key_id,omitempty" comment:"S3 Access Key ID (set via env or secrets)"`
-	S3SecretAccessKey string `toml:"s3_secret_access_key,omitempty" comment:"S3 Secret Access Key (set via env or secrets)"`
-	S3ForcePathStyle  bool   `toml:"s3_force_path_style,omitempty" comment:"Use path-style addressing (needed for MinIO/S3-compatibles)"`
-	// S3SkipVerify    bool   `toml:"s3_skip_verify,omitempty" comment:"Optional: Skip TLS verification (use with caution)"`
-}
-
-// Config holds the main Litestream configuration for replicas.
-// The database path is passed separately during initialization.
-type Config struct {
-
-	// How frequently Litestream checks the SQLite WAL (Write-Ahead Log) file
-	// index for changes. More frequent checks mean lower latency for detecting
-	// new commits but slightly higher overhead. Litestream Default: 1s (1 second)
-	MonitorInterval string `toml:"monitor_interval,omitempty" comment:"OPTIONAL, how often to check the WAL for changes (e.g., \"1s\", \"250ms\"). Default: \"1s\""`
-
-	// How often Litestream requests SQLite to perform a WAL checkpoint
-	// using TRUNCATE mode. This moves changes from the WAL file back into the
-	// main database file and truncates the WAL. Requires a brief writer lock.
-	// Helps keep the WAL file size manageable. Litestream Default: 1m (1 minute)
-	CheckpointInterval string `toml:"checkpoint_interval,omitempty" comment:"OPTIONAL, how often to request a WAL checkpoint (TRUNCATE mode) (e.g., \"1m\", \"5m\"). Default: \"1m\""`
-
-	Replicas []ReplicaConfig `toml:"replicas" comment:"Slice defining one or more replicas."`
-}
 
 // Litestream handles continuous database backups for potentially multiple replicas.
 type Litestream struct {
