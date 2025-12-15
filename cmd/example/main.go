@@ -91,6 +91,13 @@ func main() {
 	}
 	app.Logger().Info("Successfully parsed Litestream config")
 
+	// 3. Configure Litestream's internal (global) logger
+	// This directs Litestream's core logs to stderr, with the level and format
+	// specified in the config file. This does not affect the main framework logger.
+	if lsCfg.Logging != nil {
+		lsconfig.InitLog(os.Stderr, lsCfg.Logging.Level, lsCfg.Logging.Type)
+	}
+
 	app.Logger().Info("Litestream integration enabled")
 	// 4. Instantiate Litestream
 	ls, err = litestream.NewLitestream(&lsCfg, app.Logger())
