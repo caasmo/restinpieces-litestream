@@ -1,6 +1,8 @@
 # restinpieces-litestream
 
-This repository provides a Litestream integration module for the [restinpieces](https://github.com/caasmo/restinpieces) framework. It allows you to easily add continuous backup capabilities for your application's SQLite database(s) using Litestream.
+This package allows you to use Litestream's continuous backup capabilities "in-process" with your [restinpieces](https://github.com/caasmo/restinpieces) application. It removes the need to manage a separate Litestream binary, systemd service, and standalone configuration files.
+
+Instead, it provides a `restinpieces` daemon that is compiled into your application and integrates directly with the framework's lifecycle and secure configuration store.
 
 ## Configuration
 
