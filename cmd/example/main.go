@@ -60,15 +60,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	// --- Litestream Setup (Load from DB) ---
-	var ls *litestream.Litestream // Declare ls variable
+	// --- Litestream Setup ---
+	var ls *litestream.Litestream 
 
-	// Proceed with Litestream setup since age key is present.
 	app.Logger().Info("Litestream integration enabled")
 
 	// 1. Load Encrypted Config from DB using App's SecureConfigStore
-	app.Logger().Info("Loading Litestream configuration from database", "scope", litestream.ConfigScope) // Use exported constant
-	encryptedTomlData, err := app.SecureConfigStore().Latest(litestream.ConfigScope)                     // Use exported constant
+	app.Logger().Info("Loading Litestream configuration from database", "scope", litestream.ConfigScope) 
+	encryptedTomlData, err := app.SecureConfigStore().Latest(litestream.ConfigScope)
 	if err != nil {
 		app.Logger().Error("failed to load Litestream config from DB", "scope", litestream.ConfigScope, "error", err)
 		os.Exit(1)
