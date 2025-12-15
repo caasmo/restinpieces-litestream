@@ -67,14 +67,18 @@ func main() {
 	app.Logger().Info("Litestream integration enabled")
 
 	// 1. Load Encrypted Config from DB using App's SecureConfigStore
-	app.Logger().Info("Loading Litestream configuration from database", "scope", litestream.ConfigScope) 
-	configData, err := app.ConfigStore().Get(litestream.ConfigScope, 0)
+	app.Logger().Info("Loading Litestream configuration from database", "scope", litestream.ConfigScope)
+	configData, format, err := app.ConfigStore().Get(litestream.ConfigScope, 0)
 	if err != nil {
 		app.Logger().Error("failed to load Litestream config from DB", "scope", litestream.ConfigScope, "error", err)
 		os.Exit(1)
 	}
 	if len(configData) == 0 {
 		app.Logger().Error("Litestream config data loaded from DB is empty", "scope", litestream.ConfigScope)
+		os.Exit(1)
+	}
+	if format != "yaml" {
+		app.Logger().Error("invalid litestream config format", "scope", litestream.ConfigScope, "expected", "yaml", "found", format)
 		os.Exit(1)
 	}
 
