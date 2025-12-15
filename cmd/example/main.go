@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/pelletier/go-toml/v2"
+
 
 	"github.com/caasmo/restinpieces"
 
@@ -67,26 +67,21 @@ func main() {
 
 	// 1. Load Encrypted Config from DB using App's SecureConfigStore
 	app.Logger().Info("Loading Litestream configuration from database", "scope", litestream.ConfigScope) 
-	encryptedTomlData, err := app.SecureConfigStore().Latest(litestream.ConfigScope)
+	configData, err := app.ConfigStore().Get(litestream.ConfigScope, 0)
 	if err != nil {
 		app.Logger().Error("failed to load Litestream config from DB", "scope", litestream.ConfigScope, "error", err)
 		os.Exit(1)
 	}
-	if len(encryptedTomlData) == 0 {
+	if len(configData) == 0 {
 		app.Logger().Error("Litestream config data loaded from DB is empty", "scope", litestream.ConfigScope)
 		os.Exit(1)
 	}
 
 	// 2. Unmarshal TOML Config
 	var lsCfg litestream.Config
-	if err := toml.Unmarshal(encryptedTomlData, &lsCfg); err != nil {
-		app.Logger().Error("failed to unmarshal Litestream TOML config", "scope", litestream.ConfigScope, "error", err)
-		os.Exit(1)
-	}
-	// Log without db_path from config, as it's removed
-	app.Logger().Info("Successfully unmarshalled Litestream config", "scope", litestream.ConfigScope, "replica_count", len(lsCfg.Replicas))
+	// TODO: In the next step, we will unmarshal configData (YAML) into Litestream's native Config struct.
 
-	app.Logger().Info("Litestream integration enabled", "conf", lsCfg)
+	app.Logger().Info("Litestream integration enabled")
 	// 4. Instantiate Litestream
 	ls, err = litestream.NewLitestream(*dbPath, lsCfg, app.Logger())
 	if err != nil {
