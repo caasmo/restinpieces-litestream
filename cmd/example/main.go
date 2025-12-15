@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -9,7 +8,6 @@ import (
 
 	"github.com/caasmo/restinpieces"
 
-	lsconfig "github.com/benbjohnson/litestream/config"
 	"github.com/caasmo/restinpieces-litestream"
 )
 
@@ -61,46 +59,11 @@ func main() {
 	}
 
 	// --- Litestream Setup ---
-	// The configuration is now a standard Litestream YAML file.
-	var ls *litestream.Litestream 
-
-	app.Logger().Info("Litestream integration enabled")
-
-	// 1. Load Encrypted Config from DB using App's SecureConfigStore
-	app.Logger().Info("Loading Litestream configuration from database", "scope", litestream.ConfigScope)
-	configData, format, err := app.ConfigStore().Get(litestream.ConfigScope, 0)
-	if err != nil {
-		app.Logger().Error("failed to load Litestream config from DB", "scope", litestream.ConfigScope, "error", err)
-		os.Exit(1)
-	}
-	if len(configData) == 0 {
-		app.Logger().Error("Litestream config data loaded from DB is empty", "scope", litestream.ConfigScope)
-		os.Exit(1)
-	}
-	if format != "yaml" {
-		app.Logger().Error("invalid litestream config format", "scope", litestream.ConfigScope, "expected", "yaml", "found", format)
-		os.Exit(1)
-	}
-
-	// 2. Parse and Validate Litestream Config
-	app.Logger().Info("Parsing and validating Litestream configuration")
-	lsCfg, err := lsconfig.ParseConfig(bytes.NewReader(configData), false)
-	if err != nil {
-		app.Logger().Error("invalid litestream config", "scope", litestream.ConfigScope, "error", err)
-		os.Exit(1)
-	}
-	app.Logger().Info("Successfully parsed Litestream config")
-
-	// 3. Configure Litestream's internal (global) logger
-	// This directs Litestream's core logs to stderr, with the level and format
-	// specified in the config file. This does not affect the main framework logger.
-	if lsCfg.Logging != nil {
-		lsconfig.InitLog(os.Stderr, lsCfg.Logging.Level, lsCfg.Logging.Type)
-	}
-
-	app.Logger().Info("Litestream integration enabled")
-	// 4. Instantiate Litestream
-	ls, err = litestream.NewLitestream(&lsCfg, app.Logger())
+	// The New() constructor handles loading the config from the DB, parsing it,
+	// and setting up the internal logger.
+	app.Logger().Info("Initializing Litestream daemon...")
+	var ls *litestream.Litestream
+	ls, err = litestream.New(app)
 	if err != nil {
 		app.Logger().Error("failed to init Litestream", "error", err)
 		os.Exit(1)
