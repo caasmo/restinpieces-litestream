@@ -1,15 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"log/slog"
 	"os"
 
-
-
 	"github.com/caasmo/restinpieces"
 
+	lsconfig "github.com/benbjohnson/litestream/config"
 	"github.com/caasmo/restinpieces-litestream"
 )
 
@@ -61,6 +61,7 @@ func main() {
 	}
 
 	// --- Litestream Setup ---
+	// The configuration is now a standard Litestream YAML file.
 	var ls *litestream.Litestream 
 
 	app.Logger().Info("Litestream integration enabled")
@@ -77,9 +78,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 2. Unmarshal TOML Config
-	var lsCfg litestream.Config
-	// TODO: In the next step, we will unmarshal configData (YAML) into Litestream's native Config struct.
+	// 2. Parse and Validate Litestream Config
+	app.Logger().Info("Parsing and validating Litestream configuration")
+	lsCfg, err := lsconfig.ParseConfig(bytes.NewReader(configData), false)
+	if err != nil {
+		app.Logger().Error("invalid litestream config", "scope", litestream.ConfigScope, "error", err)
+		os.Exit(1)
+	}
+	app.Logger().Info("Successfully parsed Litestream config")
 
 	app.Logger().Info("Litestream integration enabled")
 	// 4. Instantiate Litestream
