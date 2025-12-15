@@ -45,8 +45,8 @@ type Litestream struct {
 	directoryMonitors []*setup.DirectoryMonitor
 }
 
-// NewLitestream creates a new Litestream instance from a configuration object.
-func NewLitestream(cfg *config.Config, logger *slog.Logger) (*Litestream, error) {
+// setup creates a new Litestream instance from a configuration object.
+func setup(cfg *config.Config, logger *slog.Logger) (*Litestream, error) {
 	// Setup databases.
 	if len(cfg.DBs) == 0 {
 		return nil, fmt.Errorf("no databases specified in configuration")
