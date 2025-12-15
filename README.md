@@ -6,14 +6,14 @@ This repository provides a Litestream integration module for the [restinpieces](
 
 This module uses the standard `litestream.yml` configuration format. Litestream configuration is managed securely through the restinpieces `SecureConfigStore`, which is managed with the `ripc` command-line tool.
 
-1.  **Create a `litestream.yml` file:** Create a standard Litestream configuration file. You can find examples in the [official Litestream documentation](https://litestream.io/config/).
+1.  **Create a `litestream.yml` file:** Create a standard Litestream configuration file. You can find examples and a full reference in the [official Litestream configuration documentation](https://litestream.io/reference/config/).
 
 2.  **Encrypt and Store with `ripc`:** Use the `ripc config save` command to encrypt and store your YAML file in the application's database. The scope must be `litestream`, as defined by `litestream.ConfigScope`.
 
     ```bash
     ripc -age-key /path/to/your/age.key -dbpath /path/to/your/app.db config save -scope litestream /path/to/your/litestream.yml
     ```
-    For more information on `ripc`, see the [restinpieces documentation](https://github.com/caasmo/restinpieces).
+    For more information on `ripc`, see the [`ripc` documentation](https://github.com/caasmo/restinpieces/blob/master/doc/ripc.md).
 
 ## Logging
 
