@@ -14,29 +14,31 @@ import (
 )
 
 func main() {
-	// --- Core Application Flags ---
-	dbPath := flag.String("dbpath", "app.db", "SQLite database file path")
-	ageKeyPath := flag.String("age-key", "", "Path to the age identity file (private key) for decrypting Litestream config (required)")
+	// Define flags directly in main
+	dbPath := flag.String("dbpath", "", "Path to the SQLite database file (required)")
+	ageKeyPath := flag.String("age-key", "", "Path to the age identity (private key) file (required)")
 
+	// Set custom usage message for the application
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s -dbpath <path> -age-key <path> [flags]\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s -dbpath <database-path> -age-key <identity-file-path>\n\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Start the restinpieces application server.\n\n")
 		fmt.Fprintf(os.Stderr, "Flags:\n")
 		flag.PrintDefaults()
 	}
 
+	// Parse flags
 	flag.Parse()
 
+	// Validate required flags
 	if *dbPath == "" || *ageKeyPath == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	// --- Create the Database Pool ---
-	dbPool, err := restinpieces.NewZombiezenPool(*dbPath)
+	dbPool, err := restinpieces.NewZombiezenPerformancePool(*dbPath)
 	if err != nil {
 		slog.Error("failed to create database pool", "error", err)
-		os.Exit(1) // Exit if pool creation fails
+	    os.Exit(1)
 	}
 
 	defer func() {
@@ -46,13 +48,12 @@ func main() {
 		}
 	}()
 
-	// --- Initialize the Application ---
 	app, srv, err := restinpieces.New(
-		restinpieces.WithDbZombiezen(dbPool),
-		restinpieces.WithAgeKeyPath(*ageKeyPath), // Use renamed flag variable
-		restinpieces.WithRouterServeMux(),
-		restinpieces.WithCacheRistretto(),
-		restinpieces.WithTextLogger(&slog.HandlerOptions{Level: slog.LevelInfo}),
+		restinpieces.WithZombiezenPool(dbPool), 
+		restinpieces.WithAgeKeyPath(*ageKeyPath),
+        // use default cache ristretto
+        // use default router serveMux
+        // use default slog logger Text
 	)
 	if err != nil {
 		slog.Error("failed to initialize application", "error", err)
