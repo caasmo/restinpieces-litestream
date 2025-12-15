@@ -4,23 +4,16 @@ This repository provides a Litestream integration module for the [restinpieces](
 
 ## Configuration
 
-This module now uses the standard `litestream.yml` configuration format. Litestream configuration is managed securely through the restinpieces `SecureConfigStore`.
+This module uses the standard `litestream.yml` configuration format. Litestream configuration is managed securely through the restinpieces `SecureConfigStore`, which is managed with the `ripc` command-line tool.
 
-1.  **Create a `litestream.yml` file:** Create a standard Litestream configuration file. You can find examples in the [official Litestream documentation](https://litestream.io/config/). You can configure replicas for one or more databases, including using directory monitoring.
+1.  **Create a `litestream.yml` file:** Create a standard Litestream configuration file. You can find examples in the [official Litestream documentation](https://litestream.io/config/).
 
-2.  **Encrypt and Store:** Use the `insert-config` tool provided by the [restinpieces](https://github.com/caasmo/restinpieces) framework to encrypt the YAML file using your age key and store it in the database. Use the scope defined by `litestream.ConfigScope` (default: "litestream").
+2.  **Encrypt and Store with `ripc`:** Use the `ripc config save` command to encrypt and store your YAML file in the application's database. The scope must be `litestream`, as defined by `litestream.ConfigScope`.
+
     ```bash
-    # Assuming insert-config is built and in your PATH
-    # and restinpieces is in your GOPATH
-    go build -o bin/insert-config ../restinpieces/cmd/insert-config
-    ./bin/insert-config \
-      -age-key /path/to/your/age.key \
-      -db /path/to/your/app.db \
-      -file /path/to/your/litestream.yml \
-      -scope litestream \
-      -format yaml \
-      -desc "Initial Litestream configuration"
+    ripc -age-key /path/to/your/age.key -dbpath /path/to/your/app.db config save -scope litestream /path/to/your/litestream.yml
     ```
+    For more information on `ripc`, see the [restinpieces documentation](https://github.com/caasmo/restinpieces).
 
 ## Logging
 
@@ -54,23 +47,14 @@ Refer to [cmd/example/main.go](./cmd/example/main.go) to see how to:
 *   Instantiate the `litestream.Litestream` service.
 *   Add it as a daemon to the `restinpieces.Server`.
 
-## Driver Compatibility (CGO vs Pure-Go)
+## Driver Compatibility
 
-**Important:** The underlying [Litestream library](https://github.com/benbjohnson/litestream) internally uses the [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3) driver, which relies on CGO. This is a dependency of Litestream itself.
+As of v0.5.0, the underlying [Litestream library](https://github.com/benbjohnson/litestream) uses the excellent [modernc.org/sqlite](https://modernc.org/sqlite) driver, which is **pure-Go**.
 
-**Using Pure-Go Drivers:**
-You **can** use this `restinpieces-litestream` module even if your main application uses a pure-Go SQLite driver for its database operations, such as:
-*   [zombiezen.com/go/sqlite](https://zombiezen.com/go/sqlite) (the default in `restinpieces`)
-*   [modernc.org/sqlite](https://modernc.org/sqlite)
-
-The CGO dependency of Litestream does not conflict with pure-Go drivers used by the rest of your application.
-
-**Using Other CGO Drivers:**
-You will encounter compilation errors if your main application attempts to use a *different* CGO-based SQLite driver simultaneously, such as [crawshaw.io/sqlite](https://crawshaw.io/sqlite). This is because Go does not permit linking multiple different CGO implementations of SQLite within the same binary.
-
-The `restinpieces` framework provides a separate database implementation for the Crawshaw driver here: [caasmo/restinpieces-sqlite-crawshaw](https://github.com/caasmo/restinpieces-sqlite-crawshaw). However, you cannot use it in the same application build as this Litestream module.
-
-**In summary:** This module works fine with pure-Go SQLite drivers but conflicts with other CGO-based SQLite drivers like Crawshaw's.
+This is a major advantage as it means this module has **no CGO dependency**.
+*   No C compiler or external dependencies are needed to build your application.
+*   Cross-compilation is simple.
+*   There are no conflicts with any other SQLite drivers (whether pure-Go or CGO-based) that your main application might use.
 
 ## SQLite PRAGMAs for Litestream
 
