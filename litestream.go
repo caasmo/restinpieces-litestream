@@ -1,9 +1,11 @@
 package litestream
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/benbjohnson/litestream"
 	"github.com/benbjohnson/litestream/abs"
@@ -15,6 +17,7 @@ import (
 	"github.com/benbjohnson/litestream/s3"
 	"github.com/benbjohnson/litestream/sftp"
 	"github.com/benbjohnson/litestream/setup"
+	"github.com/caasmo/restinpieces"
 )
 
 // ConfigScope defines the default scope used when storing/retrieving
@@ -43,6 +46,41 @@ type Litestream struct {
 
 	// Holds the running directory monitors so they can be closed by Stop().
 	directoryMonitors []*setup.DirectoryMonitor
+}
+
+// New creates a new Litestream daemon by loading its configuration from the
+// provided restinpieces application context.
+func New(app *restinpieces.App) (*Litestream, error) {
+	logger := app.Logger()
+
+	logger.Info("Loading Litestream configuration from database", "scope", ConfigScope)
+	configData, format, err := app.ConfigStore().Get(ConfigScope, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load Litestream config from DB: %w", err)
+	}
+	if len(configData) == 0 {
+		return nil, fmt.Errorf("litestream config data loaded from DB is empty (scope: %s)", ConfigScope)
+	}
+	if format != "yaml" {
+		return nil, fmt.Errorf("invalid litestream config format: expected 'yaml', found '%s'", format)
+	}
+
+	logger.Info("Parsing and validating Litestream configuration")
+	cfg, err := config.ParseConfig(bytes.NewReader(configData), false)
+	if err != nil {
+		return nil, fmt.Errorf("invalid litestream config: %w", err)
+	}
+	logger.Info("Successfully parsed Litestream config")
+
+	// Configure Litestream's internal (global) logger.
+	// This directs Litestream's core logs to stderr, with the level and format
+	// specified in the config file. This does not affect the main framework logger.
+	if cfg.Logging != nil {
+		config.InitLog(os.Stderr, cfg.Logging.Level, cfg.Logging.Type)
+	}
+
+	// Use the internal setup function to create the daemon instance
+	return setup(&cfg, logger)
 }
 
 // setup creates a new Litestream instance from a configuration object.
