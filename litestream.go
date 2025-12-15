@@ -17,7 +17,7 @@ import (
 	"github.com/benbjohnson/litestream/s3"
 	"github.com/benbjohnson/litestream/sftp"
 	"github.com/benbjohnson/litestream/setup"
-	"github.com/caasmo/restinpieces"
+	"github.com/caasmo/restinpieces/core"
 )
 
 // ConfigScope defines the default scope used when storing/retrieving
@@ -50,7 +50,7 @@ type Litestream struct {
 
 // New creates a new Litestream daemon by loading its configuration from the
 // provided restinpieces application context.
-func New(app *restinpieces.App) (*Litestream, error) {
+func New(app *core.App) (*Litestream, error) {
 	logger := app.Logger()
 
 	logger.Info("Loading Litestream configuration from database", "scope", ConfigScope)
