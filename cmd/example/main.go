@@ -89,7 +89,7 @@ func main() {
 
 	app.Logger().Info("Litestream integration enabled")
 	// 4. Instantiate Litestream
-	ls, err = litestream.NewLitestream(*dbPath, lsCfg, app.Logger())
+	ls, err = litestream.NewLitestream(&lsCfg, app.Logger())
 	if err != nil {
 		app.Logger().Error("failed to init Litestream", "error", err)
 		os.Exit(1)

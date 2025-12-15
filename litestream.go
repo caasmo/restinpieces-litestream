@@ -137,81 +137,75 @@ func (l *Litestream) Name() string {
 }
 
 // Start begins the continuous backup process in a goroutine.
-// It returns an error immediately if the initial setup (opening the database
-// or starting the replica) fails. Otherwise, it returns nil and the backup
-// process continues in the background. Any errors during individual replica
-// startup within the goroutine will be logged but won't stop the process.
+// It returns an error if the initial setup fails, otherwise it returns nil
+// and the backup process continues in the background.
 func (l *Litestream) Start() error {
-	l.logger.Info("💾 litestream: opening database for replication")
-	// Open database - this is the primary blocking operation before the goroutine.
-	if err := l.db.Open(); err != nil {
-		l.logger.Error("💾 litestream: failed to open database", "error", err)
-		return fmt.Errorf("litestream: failed to open database: %w", err)
-	}
-	l.logger.Info("💾 litestream: database opened successfully")
-
-	// Channel to synchronize startup: reports error or nil for success
+	l.logger.Info("starting litestream backup service")
 	startupComplete := make(chan error, 1)
 
 	go func() {
-		var startupErr error // Track the first error encountered
-
 		defer close(l.shutdownDone)
 		defer func() {
-			l.logger.Info("💾 litestream: closing database")
-			if err := l.db.Close(); err != nil {
-				l.logger.Error("💾 litestream: error closing database during shutdown", "error", err)
+			// Ensure all monitors are closed first.
+			for _, m := range l.directoryMonitors {
+				m.Close()
+			}
+			l.logger.Debug("closed all directory monitors")
+
+			// Then close the store, which handles its databases.
+			if err := l.store.Close(context.Background()); err != nil {
+				l.logger.Error("failed to close store during shutdown", "error", err)
 			} else {
-				l.logger.Debug("💾 litestream: database closed")
+				l.logger.Debug("litestream store closed")
 			}
 		}()
 
-		l.logger.Info("💾 litestream: starting replication for all configured replicas")
+		// Open the store, which begins monitoring all its databases.
+		if err := l.store.Open(l.ctx); err != nil {
+			l.logger.Error("cannot open store", "error", err)
+			startupComplete <- err
+			return
+		}
+		l.logger.Info("litestream store opened")
 
-		for _, replica := range l.db.Replicas {
-			rl := l.logger.With("replica_name", replica.Name) // Replica-specific logger
-			rl.Info("💾 litestream: starting replica")
-			// replica.Start runs its own goroutine for syncing
-			if err := replica.Start(l.ctx); err != nil {
-				rl.Error("💾 litestream: CRITICAL - failed to start replica", "error", err)
-				startupErr = fmt.Errorf("failed to start replica '%s': %w", replica.Name, err)
-				break // Stop trying to start other replicas
-			} else {
-				rl.Info("💾 litestream: replica started successfully")
+		// Start directory monitors for dynamic database discovery.
+		for _, entry := range l.watchables {
+			monitor, err := setup.NewDirectoryMonitor(l.ctx, l.store, entry.config, entry.dbs)
+			if err != nil {
+				l.logger.Error("failed to start directory monitor, shutting down", "dir", entry.config.Dir, "error", err)
+				// A failure to start a monitor is critical, trigger a shutdown.
+				l.cancel()
+				startupComplete <- err
+				return
 			}
+			l.directoryMonitors = append(l.directoryMonitors, monitor)
+			l.logger.Info("started directory monitor", "dir", entry.config.Dir)
 		}
 
-		if startupErr != nil {
-			l.logger.Error("💾 litestream: one or more replicas failed to start, initiating shutdown", "error", startupErr)
-			startupComplete <- startupErr // Report the error back to Start() caller
-			l.cancel()                    // Trigger context cancellation to stop everything
-			return                        // Exit the goroutine
-		}
-
-		l.logger.Info("💾 litestream: all replicas started successfully")
+		l.logger.Info("litestream backup service started successfully")
 		startupComplete <- nil // Signal successful startup
 
+		// Wait for shutdown signal.
 		<-l.ctx.Done()
-		l.logger.Info("💾 litestream: received shutdown signal, initiating replica stop via db.Close()")
-		// db.Close() called by defer will handle stopping replicas
+		l.logger.Info("received shutdown signal")
 	}()
 
-	err := <-startupComplete
-	return err
+	// Wait for the startup to complete or fail.
+	return <-startupComplete
 }
 
 // Stop gracefully shuts down the backup process by cancelling the context.
 // It waits until the background goroutine confirms shutdown or the provided context times out.
 func (l *Litestream) Stop(ctx context.Context) error {
-	l.logger.Info("💾 litestream: stopping backup process")
+	l.logger.Info("stopping litestream backup service")
 	l.cancel() // Signal the background goroutine to stop
 
 	select {
 	case <-l.shutdownDone:
-		l.logger.Info("💾 litestream: stopped gracefully")
+		l.logger.Info("litestream backup service stopped gracefully")
 		return nil
 	case <-ctx.Done():
-		l.logger.Info("💾 litestream: shutdown timed out")
+		l.logger.Warn("shutdown timed out", "error", ctx.Err())
 		return ctx.Err()
 	}
 }
