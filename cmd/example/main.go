@@ -35,7 +35,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	dbPool, err := restinpieces.NewZombiezenPerformancePool(*dbPath)
+	dbPool, err := restinpieces.NewZombiezenPool(*dbPath)
 	if err != nil {
 		slog.Error("failed to create database pool", "error", err)
 	    os.Exit(1)
