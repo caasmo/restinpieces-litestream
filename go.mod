@@ -46,6 +46,7 @@ require (
 	github.com/jalaali/go-jalaali v0.0.0-20210801064154-80525e88d958 // indirect
 	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/keilerkonzept/topk v1.1.4 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/magefile/mage v1.14.0 // indirect
 	github.com/markusmobius/go-dateparser v1.2.4 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -74,9 +75,12 @@ require (
 	google.golang.org/genproto v0.0.0-20241021214115-324edc3d5d38 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20241118233622-e639e219e697 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	modernc.org/libc v1.66.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 	modernc.org/sqlite v1.38.2 // indirect
 	zombiezen.com/go/sqlite v1.4.0 // indirect
 )
+
+replace github.com/benbjohnson/litestream => github.com/caasmo/litestream v0.0.0-20251215013223-f9db4b3a54e5
