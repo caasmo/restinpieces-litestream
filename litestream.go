@@ -62,8 +62,8 @@ func New(app *core.App) (*Litestream, error) {
 	if len(configData) == 0 {
 		return nil, fmt.Errorf("litestream config data loaded from DB is empty (scope: %s)", ConfigScope)
 	}
-	if format != "yaml" {
-		return nil, fmt.Errorf("invalid litestream config format: expected 'yaml', found '%s'", format)
+	if format != "yaml" && format != "yml" {
+		return nil, fmt.Errorf("invalid litestream config format: expected 'yaml' or 'yml', found '%s'", format)
 	}
 
 	// Validate that the config file does not contain unexpanded environment variables.
