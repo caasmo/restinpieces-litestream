@@ -5,7 +5,6 @@ go 1.25
 require (
 	github.com/benbjohnson/litestream v0.5.3
 	github.com/caasmo/restinpieces v0.5.1-0.20251205153709-44ebb8b26cbf
-	github.com/pelletier/go-toml/v2 v2.2.4
 )
 
 require (
@@ -61,7 +60,6 @@ require (
 	github.com/hablullah/go-juliandays v1.0.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/jalaali/go-jalaali v0.0.0-20210801064154-80525e88d958 // indirect
-	github.com/julienschmidt/httprouter v1.3.0 // indirect
 	github.com/keilerkonzept/topk v1.1.4 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/kr/fs v0.1.0 // indirect
@@ -69,13 +67,12 @@ require (
 	github.com/magefile/mage v1.14.0 // indirect
 	github.com/markusmobius/go-dateparser v1.2.4 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nats-io/nats.go v1.44.0 // indirect
 	github.com/nats-io/nkeys v0.4.11 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
-	github.com/phuslu/log v1.0.117 // indirect
+	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/sftp v1.13.6 // indirect
@@ -117,4 +114,4 @@ require (
 	zombiezen.com/go/sqlite v1.4.2 // indirect
 )
 
-replace github.com/benbjohnson/litestream => github.com/caasmo/litestream v0.0.0-20251215013223-f9db4b3a54e5
+replace github.com/benbjohnson/litestream => github.com/caasmo/litestream v0.0.0-20251216015250-c59058567f34

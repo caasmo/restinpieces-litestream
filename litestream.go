@@ -81,7 +81,7 @@ func New(app *core.App) (*Litestream, error) {
 	// Configure Litestream's internal (global) logger.
 	// This directs Litestream's core logs to stderr, with the level and format
 	// specified in the config file or sensible defaults.
-	config.InitLog(os.Stderr, cfg.Logging.Level, cfg.Logging.Type)
+	setup.InitLog(os.Stderr, cfg.Logging.Level, cfg.Logging.Type)
 
 	// Use the internal setup function to create the daemon instance
 	return initialize(&cfg, logger)
