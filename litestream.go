@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"regexp"
 
 	"github.com/benbjohnson/litestream"
 	"github.com/benbjohnson/litestream/abs"
@@ -65,6 +66,11 @@ func New(app *core.App) (*Litestream, error) {
 		return nil, fmt.Errorf("invalid litestream config format: expected 'yaml', found '%s'", format)
 	}
 
+	// Validate that the config file does not contain unexpanded environment variables.
+	if err := validateNoEnvVars(configData); err != nil {
+		return nil, err
+	}
+
 	logger.Info("Parsing and validating Litestream configuration")
 	cfg, err := config.ParseConfig(bytes.NewReader(configData), false)
 	if err != nil {
@@ -79,6 +85,21 @@ func New(app *core.App) (*Litestream, error) {
 
 	// Use the internal setup function to create the daemon instance
 	return initialize(&cfg, logger)
+}
+
+// validateNoEnvVars ensures the configuration adheres to the restinpieces framework's
+// design principles. The framework mandates that all configuration be self-contained
+// and securely stored in the database. Environment variables would create an
+// external dependency and are therefore disallowed to maintain a single, auditable
+// source of truth. This function checks for and rejects configs containing
+// patterns like $VAR or ${VAR}.
+func validateNoEnvVars(data []byte) error {
+	// This regex looks for patterns like $VAR or ${VAR}.
+	re := regexp.MustCompile(`\$\w+|\$\{[^}]+\}`)
+	if found := re.Find(data); found != nil {
+		return fmt.Errorf("litestream configuration contains environment variables (e.g., '%s'). variable expansion is disabled to adhere to framework rules; please use explicit paths", string(found))
+	}
+	return nil
 }
 
 // initialize creates a new Litestream instance from a configuration object.

@@ -17,6 +17,8 @@ This module uses the standard `litestream.yml` configuration format. Litestream 
     ```
     For more information on `ripc`, see the [`ripc` documentation](https://github.com/caasmo/restinpieces/blob/master/doc/ripc.md).
 
+**Note:** A key principle of the `restinpieces` framework is that all configuration must be self-contained and securely stored in the database to create a single, auditable source of truth. Therefore, this module does not support environment variable expansion (e.g., `$HOME` or `${VAR}`) within the `litestream.yml` file. Using them will result in an error on startup. Please use explicit paths in your configuration.
+
 ## Logging
 
 The upstream Litestream project is designed primarily as a standalone binary. This architecture makes it difficult to cleanly inject a custom `slog.Logger` when using Litestream as an embedded library, as its internal components fall back to a global default logger.
