@@ -33,6 +33,7 @@ func main() {
 		os.Exit(1)
 	}
 
+
 	dbPool, err := restinpieces.NewZombiezenPool(*dbPath)
 	if err != nil {
 		slog.Error("failed to create database pool", "error", err)
@@ -59,19 +60,17 @@ func main() {
 	}
 
 	// --- Litestream Setup ---
-	// The New() constructor handles loading the config from the DB, parsing it,
-	// and setting up the internal logger.
-	app.Logger().Info("Initializing Litestream daemon...")
+	slog.Info("Initializing Litestream daemon...")
 	var ls *litestream.Litestream
 	ls, err = litestream.New(app)
 	if err != nil {
-		app.Logger().Error("failed to init Litestream", "error", err)
+		slog.Error("failed to init litestream", "error", err)
 		os.Exit(1)
 	}
 
 	// 5. Add Litestream as a Daemon
 	srv.AddDaemon(ls)
-	app.Logger().Info("Litestream daemon added to the server")
+	slog.Info("Litestream daemon added to the server")
 
 	srv.Run()
 
