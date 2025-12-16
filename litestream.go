@@ -78,11 +78,11 @@ func New(app *core.App) (*Litestream, error) {
 	config.InitLog(os.Stderr, cfg.Logging.Level, cfg.Logging.Type)
 
 	// Use the internal setup function to create the daemon instance
-	return setup(&cfg, logger)
+	return initialize(&cfg, logger)
 }
 
-// setup creates a new Litestream instance from a configuration object.
-func setup(cfg *config.Config, logger *slog.Logger) (*Litestream, error) {
+// initialize creates a new Litestream instance from a configuration object.
+func initialize(cfg *config.Config, logger *slog.Logger) (*Litestream, error) {
 	// Setup databases.
 	if len(cfg.DBs) == 0 {
 		return nil, fmt.Errorf("no databases specified in configuration")
