@@ -22,6 +22,10 @@ A key principle of the `restinpieces` framework is that all configuration must b
 
 To enforce this, a validation check runs on startup. The presence of environment variable syntax will cause the application to fail, **even if the variables are inside comments**. Please ensure your configuration contains only explicit paths and values.
 
+### Deactivated Upstream Features
+
+The upstream Litestream project includes several features designed for when it is run as a standalone binary. When using `restinpieces-litestream` as an embedded Go library, some of these features are not suitable and have been deactivated. Specifically, configuration options related to the **`exec` subcommand**, the **MCP server**, and **Prometheus metrics** are not supported.
+
 ## Logging
 
 The upstream Litestream project is designed primarily as a standalone binary. This architecture makes it difficult to cleanly inject a custom `slog.Logger` when using Litestream as an embedded library, as its internal components fall back to a global default logger.
