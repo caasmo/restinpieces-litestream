@@ -59,18 +59,48 @@ sudo setcap cap_net_bind_service=+ep ./myapp
 
 ### Step 4: Perform a Local Restore
 
-To simulate a disaster recovery scenario, you can use the official `litestream` binary to restore the database from your replica.
+To simulate a disaster recovery scenario, you can use the official `litestream` binary to restore the database from your replica. This is useful for migrating a database, recovering from hardware failure, or testing your backup integrity.
 
 1.  **Install Litestream:**
     If you don't have it, [install the Litestream binary](https://litestream.io/installation).
 
-2.  **Restore the database:**
-    Stop your running application (`Ctrl+C`). You can delete the local `app.db` and `app.db-wal` files to simulate a complete data loss. Then, run the `litestream restore` command. The replica URL must match what you defined in your `litestream.yml`.
+2.  **Stop your application:**
+    Stop the running `./myapp` process (`Ctrl+C`). You can delete the local database files (e.g., `app.db`, `app.db-wal`) to simulate a complete data loss.
+
+3.  **Restore the database:**
+    The restore command depends on how your `litestream.yml` is configured.
+
+    **Scenario A: Simple Single Database**
+
+    If your `litestream.yml` specifies a single database with a `path` field, you can restore it by pointing to the config and specifying the database path.
     ```bash
-    # The replica URL is the destination from your config
-    litestream restore -o app.db ./litestream-replicas
+    # Given a litestream.yml that contains:
+    # dbs:
+    #   - path: ./app.db
+    #     replicas: ...
+
+    # Restore command:
+    litestream restore -o app.db -config litestream.yml ./app.db
     ```
-    This command will fetch the latest snapshot and subsequent WAL files from your replica and restore the `app.db` file to its most recent state. You can now restart your application, and it will have all its data back.
+    This tells Litestream to find the configuration for `./app.db` in the `litestream.yml` file and restore it to a new file named `app.db`.
+
+    **Scenario B: Directory Monitoring**
+
+    If you are using Litestream v0.5.0's directory monitoring feature, your `litestream.yml` specifies a `dir` instead of a `path`.
+    ```yaml
+    # Given a litestream.yml that contains:
+    # dbs:
+    #   - dir: ./data/
+    #     replicas: ...
+    ```
+    In this case, Litestream is backing up every database inside the `./data/` directory. To restore, you must specify the **exact path** of the database you want to recover. For example, to restore a database named `customer1.db` that was in that directory:
+    ```bash
+    # Restore a specific DB from the monitored directory
+    litestream restore -o customer1.restored.db -config litestream.yml ./data/customer1.db
+    ```
+    This command looks at `litestream.yml`, finds the configuration for the `./data/` directory, and then uses that to find the correct replica for `./data/customer1.db` and restores it to `customer1.restored.db`.
+
+After the restore is complete, you can restart your application, and it will have all its data back.
 
 ## Configuration
 
