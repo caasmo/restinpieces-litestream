@@ -8,6 +8,16 @@ Instead, it provides a `restinpieces` daemon that is compiled into your applicat
 
 This section provides a step-by-step guide to get the example application running and see the backup/restore process in action. The example application itself can be found in [cmd/example/main.go](./cmd/example/main.go).
 
+### Step 0: Initialize Your Application Database
+
+This package integrates with an existing `restinpieces` application. Before you begin, you must initialize the main application database (`app.db`) with the necessary tables.
+
+You can do this using the `ripc` command-line tool from the [restinpieces framework](https://github.com/caasmo/restinpieces).
+```bash
+# This command creates a new app.db file with the required framework tables.
+ripc -dbpath app.db app create
+```
+
 ### Step 1: Configure and Store Litestream Settings
 
 First, you need to provide a Litestream configuration file. This package uses the standard `litestream.yml` format.
@@ -27,7 +37,6 @@ First, you need to provide a Litestream configuration file. This package uses th
     The `restinpieces` framework stores all configuration securely inside the application database. Use the `ripc` command-line tool (provided by the `restinpieces` project) to encrypt and save your `litestream.yml`.
     ```bash
     # This command assumes you have an age key and the ripc tool.
-    # It creates a new app.db if it doesn't exist and saves the config inside it.
     ripc -age-key age_key.txt -dbpath app.db config save -scope litestream litestream.yml
     ```
     This command saves the configuration under the `litestream` scope, which the daemon will use to load its settings on startup.
