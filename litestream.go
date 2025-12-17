@@ -1,12 +1,14 @@
 package litestream
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/benbjohnson/litestream"
 	"github.com/benbjohnson/litestream/abs"
@@ -92,13 +94,26 @@ func New(app *core.App) (*Litestream, error) {
 // and securely stored in the database. Environment variables would create an
 // external dependency and are therefore disallowed to maintain a single, auditable
 // source of truth. This function checks for and rejects configs containing
-// patterns like $VAR or ${VAR}.
+// patterns like $VAR or ${VAR}. It ignores lines that are full comments.
 func validateNoEnvVars(data []byte) error {
-	// This regex looks for patterns like $VAR or ${VAR}.
 	re := regexp.MustCompile(`\$\w+|\$\{[^}]+\}`)
-	if found := re.Find(data); found != nil {
-		return fmt.Errorf("litestream configuration contains environment variables (e.g., '%s'). variable expansion is disabled to adhere to framework rules; please use explicit paths", string(found))
+	scanner := bufio.NewScanner(bytes.NewReader(data))
+	for scanner.Scan() {
+		line := scanner.Text()
+		trimmedLine := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmedLine, "#") {
+			continue
+		}
+
+		if found := re.FindString(line); found != "" {
+			return fmt.Errorf("litestream configuration contains environment variables (e.g., '%s'). variable expansion is disabled to adhere to framework rules; please use explicit paths", found)
+		}
 	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("error reading config data for validation: %w", err)
+	}
+
 	return nil
 }
 

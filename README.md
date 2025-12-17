@@ -17,7 +17,10 @@ This package uses the standard `litestream.yml` configuration format. Litestream
     ```
     For more information on `ripc`, see the [`ripc` documentation](https://github.com/caasmo/restinpieces/blob/master/doc/ripc.md).
 
-**Note:** A key principle of the `restinpieces` framework is that all configuration must be self-contained and securely stored in the database to create a single, auditable source of truth. Therefore, this package does not support environment variable expansion (e.g., `$HOME` or `${VAR}`) within the `litestream.yml` file. Using them will result in an error on startup. Please use explicit paths in your configuration.
+**Note: No Environment Variables**
+A key principle of the `restinpieces` framework is that all configuration must be self-contained and securely stored in the database to create a single, auditable source of truth. Therefore, this package **does not support environment variable expansion** (e.g., `$HOME` or `${VAR}`) within the `litestream.yml` file.
+
+To enforce this, a validation check runs on startup. The presence of environment variable syntax will cause the application to fail, **even if the variables are inside comments**. Please ensure your configuration contains only explicit paths and values.
 
 ## Logging
 
