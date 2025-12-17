@@ -4,18 +4,74 @@ This package allows you to use Litestream's continuous backup capabilities "in-p
 
 Instead, it provides a `restinpieces` daemon that is compiled into your application binary and integrates directly with the framework's lifecycle and secure configuration store.
 
+## Quickstart Example
+
+This section provides a step-by-step guide to get the example application running and see the backup/restore process in action. The example application itself can be found in [cmd/example/main.go](./cmd/example/main.go).
+
+### Step 1: Configure and Store Litestream Settings
+
+First, you need to provide a Litestream configuration file. This package uses the standard `litestream.yml` format.
+
+1.  **Create `litestream.yml`:**
+    Create a `litestream.yml` file with your desired backup replica settings. For example, to back up to a local directory:
+    ```yaml
+    dbs:
+      - path: ./app.db
+        replicas:
+          - type: file
+            path: ./litestream-replicas
+    ```
+    For more details and other replica types like S3, see the [official Litestream configuration documentation](https://litestream.io/reference/config/).
+
+2.  **Store the Configuration:**
+    The `restinpieces` framework stores all configuration securely inside the application database. Use the `ripc` command-line tool (provided by the `restinpieces` project) to encrypt and save your `litestream.yml`.
+    ```bash
+    # This command assumes you have an age key and the ripc tool.
+    # It creates a new app.db if it doesn't exist and saves the config inside it.
+    ripc -age-key age_key.txt -dbpath app.db config save -scope litestream litestream.yml
+    ```
+    This command saves the configuration under the `litestream` scope, which the daemon will use to load its settings on startup.
+
+### Step 2: Build the Example Application
+
+This repository includes an example application that demonstrates how to integrate the Litestream daemon.
+
+Build the application using the standard Go toolchain:
+```bash
+go build -o myapp ./cmd/example
+```
+This compiles the code in `cmd/example` and creates an executable file named `myapp`.
+
+### Step 3: Run the Application
+
+Now, run the compiled application:
+```bash
+./myapp
+```
+This will start the main web server and, alongside it, the Litestream daemon will begin monitoring `app.db` and replicating any changes to your configured destination. You should see log output from both the application and Litestream indicating that they have started.
+
+While the app is running, you can make changes to the database (e.g., by using `sqlite3 app.db "CREATE TABLE t(id INT);"`), and you will see Litestream backing them up.
+
+### Step 4: Perform a Local Restore
+
+To simulate a disaster recovery scenario, you can use the official `litestream` binary to restore the database from your replica.
+
+1.  **Install Litestream:**
+    If you don't have it, [install the Litestream binary](https://litestream.io/installation).
+
+2.  **Restore the database:**
+    Stop your running application (`Ctrl+C`). You can delete the local `app.db` and `app.db-wal` files to simulate a complete data loss. Then, run the `litestream restore` command. The replica URL must match what you defined in your `litestream.yml`.
+    ```bash
+    # The replica URL is the destination from your config
+    litestream restore -o app.db ./litestream-replicas
+    ```
+    This command will fetch the latest snapshot and subsequent WAL files from your replica and restore the `app.db` file to its most recent state. You can now restart your application, and it will have all its data back.
+
 ## Configuration
 
-This package uses the standard `litestream.yml` configuration format. Litestream configuration is managed securely through the restinpieces `SecureConfigStore`, which is managed with the `ripc` command-line tool.
+This package uses the standard `litestream.yml` configuration format. Litestream configuration is managed securely through the restinpieces `SecureConfigStore`, as shown in the Quickstart guide.
 
-1.  **Create a `litestream.yml` file:** Create a standard Litestream configuration file. You can find examples and a full reference in the [official Litestream configuration documentation](https://litestream.io/reference/config/).
-
-2.  **Encrypt and Store with `ripc`:** For simplicity and security, the `restinpieces` framework encrypts and stores all configuration directly within the main application SQLite database. Use the `ripc config save` command to perform this action for your Litestream configuration. The scope must be `litestream`, as defined by `litestream.ConfigScope`.
-
-    ```bash
-    ripc -age-key /path/to/your/age.key -dbpath /path/to/your/app.db config save -scope litestream /path/to/your/litestream.yml
-    ```
-    For more information on `ripc`, see the [`ripc` documentation](https://github.com/caasmo/restinpieces/blob/master/doc/ripc.md).
+For more information on `ripc`, see the [`ripc` documentation](https://github.com/caasmo/restinpieces/blob/master/doc/ripc.md).
 
 **Note: No Environment Variables**
 A key principle of the `restinpieces` framework is that all configuration must be self-contained and securely stored in the database to create a single, auditable source of truth. Therefore, this package **does not support environment variable expansion** (e.g., `$HOME` or `${VAR}`) within the `litestream.yml` file.
@@ -53,14 +109,6 @@ logging:
   stderr: false
 ```
 This configuration would cause the internal Litestream logs to be written to `os.Stdout` as text at the `INFO` level, while the main framework logs continue to go to their own destination.
-
-## Integration Example
-
-Refer to [cmd/example/main.go](./cmd/example/main.go) to see how to:
-*   Initialize the `restinpieces.Server`.
-*   Load the Litestream YAML configuration from the secure store.
-*   Instantiate the `litestream.Litestream` service.
-*   Add it as a daemon to the `restinpieces.Server`.
 
 ## Driver Compatibility
 
