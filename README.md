@@ -44,13 +44,18 @@ This compiles the code in `cmd/example` and creates an executable file named `my
 
 ### Step 3: Run the Application
 
-Now, run the compiled application:
+Now, run the compiled application, providing the same `age_key.txt` and `dbpath` you used to save the configuration:
 ```bash
-./myapp
+./myapp -age-key age_key.txt -dbpath app.db
 ```
 This will start the main web server and, alongside it, the Litestream daemon will begin monitoring `app.db` and replicating any changes to your configured destination. You should see log output from both the application and Litestream indicating that they have started.
 
-While the app is running, you can make changes to the database (e.g., by using `sqlite3 app.db "CREATE TABLE t(id INT);"`), and you will see Litestream backing them up.
+While the app is running, you can make changes to the database (e.g., by using `sqlite3 app.db "CREATE TABLE t(id INT);"`) and you will see Litestream backing them up.
+
+**Note on Privileged Ports:** If your application is configured to listen on a privileged port (any port below 1024, like 80 or 443), you will need to grant the executable special capabilities to bind to it without running as root. You can do this with the `setcap` command:
+```bash
+sudo setcap cap_net_bind_service=+ep ./myapp
+```
 
 ### Step 4: Perform a Local Restore
 
